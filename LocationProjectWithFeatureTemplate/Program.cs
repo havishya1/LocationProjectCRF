@@ -16,7 +16,7 @@ namespace LocationProjectWithFeatureTemplate
             var tags = new List<string> { "LOCATION", "OTHER" };
             //ReadNewsWireData();
             TrainingTest(tags);
-            Test1(tags, true, true);
+            Test1(tags, false, true);
 
             //const string modelFile = "../../data/tag.model";
             //const string input = "../../data/gene.test";
@@ -35,12 +35,13 @@ namespace LocationProjectWithFeatureTemplate
         {
             //const string modelFile = "../../data/gene.key.model";
             //const string input = "../../data/gene.key";
-
+            const string blackList = "../../data/BlackList.txt";
             const string modelFile = "../../data/training/tag.model.trial1";
             const string input = "../../data/training/NYT_19980403_parsed.key";
             string LoggerFile = "../../Logs/Log_"+DateTime.Now.ToFileTime()+".txt";
             const int threadCount = 1;
-            var perceptron = new Perceptron(input, modelFile, tags);
+            var config = new Config(blackList);
+            var perceptron = new Perceptron(input, modelFile, tags, false);
             perceptron.Train();
             perceptron.ReMapFeatureToK(true);
             perceptron.Dump();
@@ -84,9 +85,10 @@ namespace LocationProjectWithFeatureTemplate
                 var testGLMViterbi = new TestGLMViterbi(modelFile, input, outputFile, tags);
                 testGLMViterbi.Setup(debug);
 
-                if (eval)
+                if (eval && !debug)
                 {
                     var dump = EvaluateModel(keyFile, outputFile, outputEval);
+                    Console.WriteLine("training for: "+ inputFile);
                     Console.WriteLine(dump);
                     Console.ReadLine();
                 }    

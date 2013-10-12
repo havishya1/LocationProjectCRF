@@ -30,6 +30,7 @@ namespace LocationProjectWithFeatureTemplate
             InputSentences = new List<List<string>>();
             TagsList = new List<List<string>>();
             ReadInputs();
+            
         }
 
         public WeightVector AvgWeightVector { get; set; }
@@ -55,7 +56,7 @@ namespace LocationProjectWithFeatureTemplate
 
         public void Train()
         {
-            const int iterationCount = 10;
+            const int iterationCount = 20;
             for (var i = 0; i < iterationCount; i++)
             {
                 Console.WriteLine(DateTime.Now+" training iteration: "+ i);
@@ -70,7 +71,7 @@ namespace LocationProjectWithFeatureTemplate
                         inputTags.Add(split[1]);
                     }
                     List<string> temp;
-                    var outputTags = _viterbiForGlobalLinearModel.Decode(line, false, out temp);
+                    var outputTags = _viterbiForGlobalLinearModel.DecodeNew(line, false, out temp);
                     if (Match(inputTags, outputTags)) continue;
                     var inputFeature = (new FeatureWrapper(inputTags, line)).NextFeature().GetEnumerator();
                     var outputFeature= new FeatureWrapper(outputTags, line).NextFeature().GetEnumerator();

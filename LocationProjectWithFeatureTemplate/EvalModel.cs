@@ -10,6 +10,7 @@ namespace LocationProjectWithFeatureTemplate
             var devModel = new ReadModel(devFile);
 
             var dumpOutputModel = new WriteModel(dumpFile);
+            var dumpCompareOutputModel = new WriteModel(string.Concat(dumpFile, ".compare"));
 
             var keyIter = keyModel.ModelIterator().GetEnumerator();
             var devIter = devModel.ModelIterator().GetEnumerator();
@@ -32,6 +33,7 @@ namespace LocationProjectWithFeatureTemplate
                     dumpOutputModel.Flush();
                     return dump;
                 }
+                dumpCompareOutputModel.WriteLine(key.Key + " " + key.Value + " " + dev.Value);
 
                 if (key.Value.Contains("LOCATION"))
                 {
@@ -60,6 +62,7 @@ namespace LocationProjectWithFeatureTemplate
                 recall.ToString(CultureInfo.InvariantCulture)+ "\t" +
                 f1Score.ToString(CultureInfo.InvariantCulture));
             dumpOutputModel.Flush();
+            dumpCompareOutputModel.Flush();
             return dump;
         }
     }

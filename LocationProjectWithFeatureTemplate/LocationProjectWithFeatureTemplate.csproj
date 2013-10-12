@@ -45,6 +45,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ComputeGradient.cs" />
+    <Compile Include="Config.cs" />
     <Compile Include="EvalModel.cs">
       <SubType>Code</SubType>
     </Compile>

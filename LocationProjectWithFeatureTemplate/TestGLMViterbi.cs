@@ -43,7 +43,7 @@ namespace LocationProjectWithFeatureTemplate
             foreach (var line in inputData.GetSentence())
             {
                 List<string> debugList;
-                var outputTags = _viterbiForGlobalLinearModel.Decode(line, debug, out debugList);
+                var outputTags = _viterbiForGlobalLinearModel.DecodeNew(line, debug, out debugList);
                 if (debug)
                 {
                     writeModel.WriteDataWithTagDebug(line, outputTags, debugList);

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Globalization;
 using System.Linq;
 
@@ -37,8 +38,14 @@ namespace LocationProjectWithFeatureTemplate
            NextWordCurrentTag,
            IsPreviousWordSalutatation,
            IsPreviousLocationAndCurrentStartsWithCapital,
+           IsPreviousOtherCapitalAndCurrentStartsWithCapital,
            EndsWithApostrophy,
-           
+           FirstWord,
+            IsSalutation,
+           IsNumFollowedByCase,
+           ThreeCapitalWords,
+           AllCapsOnlyOne,     
+           IsBlackListed,
         }
 
         public Features(string t2, string t1, string t, List<string> sentence, int pos)
@@ -53,9 +60,9 @@ namespace LocationProjectWithFeatureTemplate
                 //FeatureEnums.TRIGRAMTags,
                 //FeatureEnums.BiGram,
                 //FeatureEnums.CurWordPrevTag,
-                //FeatureEnums.BiWordTag,
+                FeatureEnums.BiWordTag,
                 //FeatureEnums.Suff2Tag,
-                //FeatureEnums.Suff3Tag,
+                FeatureEnums.Suff3Tag,
                 FeatureEnums.SingleCharTag,
                 FeatureEnums.AllCapsTag,
                 FeatureEnums.AllSmallTag,
@@ -69,8 +76,14 @@ namespace LocationProjectWithFeatureTemplate
                 //FeatureEnums.NextWordCurrentTag,
                 FeatureEnums.PrevOtherWordCurrentTag,
                 FeatureEnums.IsPreviousWordSalutatation,
-                //FeatureEnums.IsPreviousLocationAndCurrentStartsWithCapital,
-                FeatureEnums.EndsWithApostrophy
+                FeatureEnums.IsPreviousLocationAndCurrentStartsWithCapital,
+                FeatureEnums.FirstWord,
+                FeatureEnums.IsSalutation,
+                FeatureEnums.IsNumFollowedByCase,
+                FeatureEnums.ThreeCapitalWords,
+                FeatureEnums.AllCapsOnlyOne,
+                FeatureEnums.IsBlackListed,
+                //FeatureEnums.EndsWithApostrophy
             };
         }
 
@@ -88,7 +101,11 @@ namespace LocationProjectWithFeatureTemplate
                     case FeatureEnums.BiWordTag:
                         if (Pos < Sentence.Count)
                         {
-                            yield return GetTagFeature();
+                            var tag = GetTagFeature();
+                            if (!string.IsNullOrEmpty(tag))
+                            {
+                                yield return tag;
+                            }
                         }
                         break;
                     case FeatureEnums.CurWordPrevTag:
@@ -259,16 +276,151 @@ namespace LocationProjectWithFeatureTemplate
                         }
                         break;
                     }
+                    case FeatureEnums.FirstWord:
+                    {
+                        if (Pos == 0)
+                        {
+                            yield return "FIRSTWORDTAG:1:"+ T;
+                        }
+                        break;
+                    }
+                    case FeatureEnums.IsPreviousOtherCapitalAndCurrentStartsWithCapital:
+                    {
+                        string tag = GetPrevCapOtherAndCurrentCapital();
+                        if (!string.IsNullOrEmpty(tag))
+                        {
+                            yield return tag;
+                        }
+                        break;
+                    }
+                    case FeatureEnums.IsSalutation:
+                    {
+                        if (Pos < Sentence.Count && IsSalutationAbbr(Sentence[Pos]))
+                        {
+                            yield return "SALUTAG:"+Sentence[Pos] +":"+ T;
+                        }
+                        break;
+                    }
+                    case FeatureEnums.IsNumFollowedByCase:
+                    {
+                        var tag = GetNumFollowedByCase();
+                        if (!string.IsNullOrEmpty(tag))
+                        {
+                            yield return tag;
+                        }
+                        break;
+                    }
+                    
+                    case FeatureEnums.ThreeCapitalWords:
+                    {
+                        var tag = GetThreeCaptitalWords();
+                        if (!string.IsNullOrEmpty(tag))
+                        {
+                            yield return tag;
+                        }
+                        break;
+                    }
+                    case FeatureEnums.AllCapsOnlyOne:
+                    {
+                        var tag = AllCapsOnlyOne();
+                        if (!string.IsNullOrEmpty(tag))
+                        {
+                            yield return tag;
+                        }
+                        break;
+                    }
+                    case FeatureEnums.IsBlackListed:
+                    {
+                        if (Config.BlackList.Contains(Sentence[Pos]))
+                        {
+                            yield return "BLACKLISTED:1:" + T;
+                        }
+                        break;
+                    }
                 }
             }
         }
 
+        private string AllCapsOnlyOne()
+        {
+            if (Pos > 0)
+            {
+                if (IsAllUpper(Sentence[Pos -1]))
+                {
+                    return null;
+                }
+            }
+            if (Pos + 1 < Sentence.Count)
+            {
+                if (IsAllUpper(Sentence[Pos + 1]))
+                {
+                    return null;
+                }
+            }
+            if (IsAllUpper(Sentence[Pos]))
+            {
+                return "ALLCAPSONLYONE:1:" + T;
+            }
+            return null;
+        }
+
+        private string GetThreeCaptitalWords()
+        {
+            if (Pos + 2 < Sentence.Count)
+            {
+                if (IsAllUpper(Sentence[Pos]))
+                    return null;
+                if (char.IsUpper(Sentence[Pos][0]) &&
+                    (char.IsUpper(Sentence[Pos + 1][0]) || Sentence[Pos].Length < 3) &&
+                    char.IsUpper(Sentence[Pos + 2][0]))
+                {
+                    return "THREECAPWORDS:1:" + T;
+                }
+            }
+            return null;
+        }
+
+        private string GetNumFollowedByCase()
+        {
+            if (Pos < Sentence.Count - 1)
+            {
+                var input = Sentence[Pos];
+                input = RemoveApos(input);
+                input = RemoveSymbols(input);
+                int result = 0;
+                int caseFlag = char.IsLower(Sentence[Pos + 1][0]) ? 0 : 1;
+
+                if (Int32.TryParse(input, out result))
+                {
+                    return "NUMFOLLOWCASE:" + caseFlag + ":" + T;
+                }
+                double temp = 0;
+                if (double.TryParse(input, out temp))
+                {
+                    return "NUMFOLLOWCASE:" + caseFlag + ":" + T;
+                }
+            }
+            return null;
+        }
+
+        private string GetPrevCapOtherAndCurrentCapital()
+        {
+            if (Pos > 0)
+            {
+                if (T1.Equals("Other") && char.IsUpper(Sentence[Pos][0]) && char.IsUpper(Sentence[Pos-1][0]))
+                {
+                    return "PREVOTHERCC:1:" + T;
+                }
+            }
+            return null;
+        }
+
         private string GetEndsWithApostrophyTag()
         {
-            bool containsApos = Sentence[Pos].EndsWith("'s");
+            bool containsApos = ContainsApos(Sentence[Pos]);
             if (!containsApos && Pos + 1 < Sentence.Count)
             {
-                containsApos = Sentence[Pos+1].StartsWith("'s");
+                containsApos = ContainsApos(Sentence[Pos + 1]);
             }
             if (containsApos)
             {
@@ -277,13 +429,28 @@ namespace LocationProjectWithFeatureTemplate
             return null;
         }
 
+        private bool ContainsApos(string input)
+        {
+            return input.EndsWith("'s") || input.EndsWith("'S");
+        }
+
+        private string RemoveApos(string input)
+        {
+            if (input.EndsWith("'s") || input.EndsWith("'S"))
+            {
+                return input.Substring(0, input.Length - 2);
+            }
+            return input;
+        }
+
         private string GetAllSmallTag()
         {
             if (Pos >= Sentence.Count)
             {
                 return null;
             }
-            if (IsAllSmall(Sentence[Pos]))
+            // University of Washington
+            if (IsAllSmall(Sentence[Pos]) && (T1.Equals("OTHER") || Sentence[Pos].Length > 3))
             {
                 return "ALLSMALLTAG:1:" + T;
             }
@@ -295,9 +462,18 @@ namespace LocationProjectWithFeatureTemplate
         {
             if (Pos > 0)
             {
-                if (T1.Equals("LOCATION") && char.IsUpper(Sentence[Pos][0]))
+                if (T1.Equals("LOCATION"))
                 {
-                    return "PREVLOCATIONCC:1:" + T;
+                    if (char.IsUpper(Sentence[Pos][0]))
+                    {
+                        return "PREVLOCATIONCC:1:" + T;
+                    }
+
+                    // University of Washington
+                    if (Sentence[Pos].Length < 4 && Pos < Sentence.Count -1 && char.IsUpper(Sentence[Pos+1][0]))
+                    {
+                        return "PREVLOCATIONCWORD:" + Sentence[Pos].Trim().ToLowerInvariant() + ":" + T;
+                    }
                 }
             }
             return null;
@@ -322,7 +498,15 @@ namespace LocationProjectWithFeatureTemplate
 
         private string GetTagFeature()
         {
-            return "TAG:" + Sentence[Pos] + ":" + T;
+            // returning this feature for small words only to cover 
+            if (Sentence[Pos].Length < 4)
+            {
+                var input = Sentence[Pos];
+                input = RemoveApos(input);
+                input = RemoveSymbols(input);
+                return "TAG:" + input.ToLowerInvariant() + ":" + T;
+            }
+            return null;
         }
 
         private string GetCurrentWordPrevTag()
@@ -337,12 +521,38 @@ namespace LocationProjectWithFeatureTemplate
 
         private string GetSuffixTag(int suffix)
         {
-            if (Pos >= Sentence.Count) return null;
-            var length = Sentence[Pos].Length;
+            // sentence should be atleast 6 words and first word should be capital
+
+            if (Pos >= Sentence.Count || ContainsApos(Sentence[Pos]) || Sentence[Pos].Length < 6
+                || !char.IsUpper(Sentence[Pos][0])) return null;
+
+            // next word should start with lower char
+            if (Pos < Sentence.Count || (Sentence[Pos].Length > 2 && char.IsUpper(Sentence[Pos + 1][0])))
+            {
+                return null;
+            }
+
+            var input = Sentence[Pos];
+
+            input = RemoveApos(input);
+            input = RemoveSymbols(input);
+
+            input = input.ToLowerInvariant();
+            // remove s and es from end.
+            if (input.EndsWith("es"))
+            {
+                input = input.Substring(0, input.Length - 2);
+            }
+            if (input.EndsWith("s"))
+            {
+                input = input.Substring(0, input.Length - 1);
+            }
+
+            var length = input.Length;
             if (length - suffix >= 0)
             {
                 return "SUFF" + suffix.ToString(CultureInfo.InvariantCulture) +
-                       "TAG:" + Sentence[Pos].Substring(length - suffix) + ":" + T;
+                       "TAG:" + input.Substring(length - suffix) + ":" + T;
             }
             return null;
         }
@@ -422,7 +632,10 @@ namespace LocationProjectWithFeatureTemplate
             {
                 return null;
             }
-            var num = Sentence[Pos].All(char.IsNumber);
+            var input = Sentence[Pos];
+            input = RemoveApos(input);
+            input = RemoveSymbols(input);
+            var num = input.All(char.IsNumber);
             if (num)
             {
                 return "NUMTAG:1:" + T;
@@ -470,9 +683,14 @@ namespace LocationProjectWithFeatureTemplate
 
         private string GetPrevOtherWordCurrentTag()
         {
-            if (Pos > 1 && T1.Equals("OTHER") && T.Equals("LOCATION"))
+            if (Pos > 1 && T1.Equals("OTHER"))
             {
-                return "PREVOTHERWORDCURRTAG:" + Sentence[Pos - 1].Trim().ToLowerInvariant() + ":" + T;
+                //if (T.Equals("LOCATION") ||
+                //    (Sentence[Pos - 1].Length < 4))
+                if (T.Equals("LOCATION"))
+                {
+                    return "PREVOTHERWORDCURRTAG:" + Sentence[Pos - 1].Trim().ToLowerInvariant() + ":" + T;
+                }
             }
             return null;
         }
@@ -502,35 +720,42 @@ namespace LocationProjectWithFeatureTemplate
             //    if (!end.Equals('.') && (char.IsSymbol(end) || char.IsPunctuation(end)))
             //        Sentence[Pos] = Sentence[Pos].Substring(0, Sentence[Pos].Length - 1);
             //}
+            input = RemoveApos(input);
+            input = RemoveSymbols(input);
+            return input.Any(char.IsSymbol) || input.Any(char.IsPunctuation);
+        }
+
+        string RemoveSymbols(string input)
+        {
             if (input.Length > 2)
             {
                 char end = input[input.Length - 1];
                 if ((char.IsSymbol(end) || char.IsPunctuation(end)))
                     input = input.Substring(0, input.Length - 1);
             }
-            return input.Any(char.IsSymbol) || input.Any(char.IsPunctuation);
+            input = input.Replace("'", "");
+            input = input.Replace("-", "");
+            return input;
         }
 
         bool IsAllUpper(string input)
         {
-            if (input.Length > 2)
-            {
-                char end = input[input.Length - 1];
-                if ((char.IsSymbol(end) || char.IsPunctuation(end)))
-                    input = input.Substring(0, input.Length - 1);
-            }
-            return input.All(t => Char.IsLetter(t) && Char.IsUpper(t));
+            input = RemoveApos(input);
+            input = RemoveSymbols(input);
+            if (input.Length > 0)
+                return input.All(t => Char.IsLetter(t) && Char.IsUpper(t));
+            return false;
         }
 
         bool IsAllSmall(string input)
         {
-            if (input.Length > 2)
+            input = RemoveApos(input);
+            input = RemoveSymbols(input);
+            if (input.Length > 0)
             {
-                char end = input[input.Length - 1];
-                if ((char.IsSymbol(end) || char.IsPunctuation(end)))
-                    input = input.Substring(0, input.Length - 1);
+                return input.All(t => Char.IsLetter(t) && Char.IsLower(t));
             }
-            return input.All(t => Char.IsLetter(t) && Char.IsLower(t));
+            return false;
         }
 
         public static float GetWeight(string feature)
