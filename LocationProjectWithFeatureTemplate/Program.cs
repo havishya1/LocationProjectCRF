@@ -16,7 +16,7 @@ namespace LocationProjectWithFeatureTemplate
             var tags = new List<string> { "LOCATION", "OTHER" };
             //ReadNewsWireData();
             TrainingTest(tags);
-            Test1(tags, false, true);
+            Test1(tags, true, true);
 
             //const string modelFile = "../../data/tag.model";
             //const string input = "../../data/gene.test";
@@ -35,14 +35,29 @@ namespace LocationProjectWithFeatureTemplate
         {
             //const string modelFile = "../../data/gene.key.model";
             //const string input = "../../data/gene.key";
-            const string blackList = "../../data/BlackList.txt";
+            var inputFiles = new[]
+            {
+                "../../data/training/NYT_19980403_parsed.key",
+                "../../data/training/APW_19980314_parsed.key",
+                "../../data/training/APW_19980424_parsed.key",
+                "../../data/training/APW_19980429_parsed.key",
+                "../../data/travelTraining/InputToCRF1.key",
+                "../../data/travelTraining/InputToCRF2.key",
+                "../../data/travelTraining/InputToCRF3.key",
+                "../../data/travelTraining/InputToCRF4.key",
+                "../../data/travelTraining/InputToCRF5.key",
+                "../../data/travelTraining/InputToCRF6.key",
+                "../../data/travelTraining/InputToCRF7.key",
+                "../../data/travelTraining/InputToCRF8.key",
+                "../../data/travelTraining/InputToCRF9.key",
+                "../../data/travelTraining/InputToCRF10.key",
+            };
             const string modelFile = "../../data/training/tag.model.trial1";
             const string input = "../../data/training/NYT_19980403_parsed.key";
             string LoggerFile = "../../Logs/Log_"+DateTime.Now.ToFileTime()+".txt";
             const int threadCount = 1;
-            var config = new Config(blackList);
-            var perceptron = new Perceptron(input, modelFile, tags, false);
-            perceptron.Train();
+            var perceptron = new Perceptron(inputFiles.ToList(), modelFile, tags, false);
+            perceptron.Train(inputFiles);
             perceptron.ReMapFeatureToK(true);
             perceptron.Dump();
             perceptron.MapFeatures.Dump();
@@ -66,12 +81,19 @@ namespace LocationProjectWithFeatureTemplate
 
             var inputFiles = new[]
                                  {
-                                     "../../data/training/NYT_19980403_parsed",
-                                     "../../data/training/APW_19980314_parsed",
-                                     "../../data/training/APW_19980424_parsed",
-                                     "../../data/training/APW_19980429_parsed",
-                                     "../../data/training/NYT_19980315_parsed",
-                                     "../../data/training/NYT_19980407_parsed"
+                                    "../../data/training/NYT_19980403_parsed",
+                                    "../../data/training/APW_19980314_parsed",
+                                    "../../data/training/APW_19980424_parsed",
+                                    "../../data/training/APW_19980429_parsed",
+                                    "../../data/training/NYT_19980315_parsed",
+                                    "../../data/training/NYT_19980407_parsed",
+                                    "../../data/travelTraining/InputToCRF6",
+                                    "../../data/travelTraining/InputToCRF7",
+                                    "../../data/travelTraining/InputToCRF8",
+                                    "../../data/travelTraining/InputToCRF9",
+                                    "../../data/travelTraining/InputToCRF10",
+                                    "../../data/travelTraining/InputToCRF11",
+                                    "../../data/travelTraining/InputToCRF12",
                                  };
 
             foreach (var inputFile in inputFiles)

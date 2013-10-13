@@ -17,3 +17,16 @@ Wednesday
 Thursday
 Friday
 Saturday
+Kms
+INR
+USD
+Kmpl
+Kmph
+AM
+PM
+IST
+PST
+GMT
+UTC
+A.M.
+P.M.

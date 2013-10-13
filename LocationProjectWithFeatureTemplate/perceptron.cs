@@ -6,7 +6,6 @@ namespace LocationProjectWithFeatureTemplate
 {
     class Perceptron
     {
-        private readonly string _inputFile;
         private readonly string _outputFile;
         private readonly bool _useAvg;
         public WeightVector WeightVector;
@@ -16,28 +15,28 @@ namespace LocationProjectWithFeatureTemplate
         public List<List<string>> InputSentences;
         public List<List<string>> TagsList;
 
-        public Perceptron(string inputFile, string outputFile, List<string> tagList, bool useAvg = false)
+        public Perceptron(List<string> inputFiles, string outputFile, List<string> tagList, bool useAvg = false)
         {
-            _inputFile = inputFile;
             _outputFile = outputFile;
             _useAvg = useAvg;
             var tags = new Tags(tagList);
-            MapFeatures = new MapFeaturesToK(inputFile, string.Concat(outputFile, ".featuresToK"), tagList);
-            MapFeatures.StartMapping();
+            MapFeatures = new MapFeaturesToK(string.Concat(outputFile, ".featuresToK"), tagList);
+            MapFeatures.StartMapping(inputFiles);
+            
             WeightVector = new WeightVector(MapFeatures.DictFeaturesToK, MapFeatures.FeatureCount);
             AvgWeightVector = new WeightVector(MapFeatures.DictFeaturesToK, MapFeatures.FeatureCount);
             _viterbiForGlobalLinearModel = new ViterbiForGlobalLinearModel(WeightVector, tags);
             InputSentences = new List<List<string>>();
             TagsList = new List<List<string>>();
-            ReadInputs();
+            //ReadInputs();
             
         }
 
         public WeightVector AvgWeightVector { get; set; }
 
-        public void ReadInputs()
+        public void ReadInputs(string inputFile)
         {
-            var inputData = new ReadInputData(_inputFile);
+            var inputData = new ReadInputData(inputFile);
             foreach (var line in inputData.GetSentence())
             {
                 var inputTags = new List<string>(line.Count);
@@ -54,43 +53,50 @@ namespace LocationProjectWithFeatureTemplate
             inputData.Reset();    
         }
 
-        public void Train()
+        public void Train(string[] inputFiles)
         {
-            const int iterationCount = 20;
-            for (var i = 0; i < iterationCount; i++)
+            for (int fileNum = 0; fileNum < inputFiles.Length; fileNum++)
             {
-                Console.WriteLine(DateTime.Now+" training iteration: "+ i);
-                var inputData = new ReadInputData(_inputFile);
-                foreach (var line in inputData.GetSentence())
+                var inputFile = inputFiles[fileNum];
+
+                Console.WriteLine(DateTime.Now + " " + inputFile + " training  ");
+
+                const int iterationCount = 10;
+                for (var i = 0; i < iterationCount; i++)
                 {
-                    var inputTags = new List<string>(line.Count);
-                    for(var j = 0; j < line.Count;j++)
+                   // Console.WriteLine(DateTime.Now + " " + inputFile + " training iteration: " + i);
+                    var inputData = new ReadInputData(inputFile);
+                    foreach (var line in inputData.GetSentence())
                     {
-                        var split = line[j].Split(new char[] {' '});
-                        line[j] = split[0];
-                        inputTags.Add(split[1]);
+                        var inputTags = new List<string>(line.Count);
+                        for (var j = 0; j < line.Count; j++)
+                        {
+                            var split = line[j].Split(new char[] {' '});
+                            line[j] = split[0];
+                            inputTags.Add(split[1]);
+                        }
+                        List<string> temp;
+                        var outputTags = _viterbiForGlobalLinearModel.DecodeNew(line, false, out temp);
+                        if (Match(inputTags, outputTags)) continue;
+                        var inputFeature = (new FeatureWrapper(inputTags, line)).NextFeature().GetEnumerator();
+                        var outputFeature = new FeatureWrapper(outputTags, line).NextFeature().GetEnumerator();
+                        while (inputFeature.MoveNext() && outputFeature.MoveNext())
+                        {
+                            if (inputFeature.Current.Key.Equals(outputFeature.Current.Key))
+                                continue;
+                            var inputAdd = 1*Features.GetWeight(inputFeature.Current.Value);
+                            var outputRemove = -1*Features.GetWeight(outputFeature.Current.Value);
+                            WeightVector.AddToKey(inputFeature.Current.Value, inputAdd);
+                            WeightVector.AddToKey(outputFeature.Current.Value, outputRemove);
+                        }
                     }
-                    List<string> temp;
-                    var outputTags = _viterbiForGlobalLinearModel.DecodeNew(line, false, out temp);
-                    if (Match(inputTags, outputTags)) continue;
-                    var inputFeature = (new FeatureWrapper(inputTags, line)).NextFeature().GetEnumerator();
-                    var outputFeature= new FeatureWrapper(outputTags, line).NextFeature().GetEnumerator();
-                    while (inputFeature.MoveNext() && outputFeature.MoveNext())
-                    {
-                        if (inputFeature.Current.Key.Equals(outputFeature.Current.Key))
-                            continue;
-                        var inputAdd = 1*Features.GetWeight(inputFeature.Current.Value);
-                        var outputRemove = -1*Features.GetWeight(outputFeature.Current.Value);
-                        WeightVector.AddToKey(inputFeature.Current.Value,inputAdd);
-                        WeightVector.AddToKey(outputFeature.Current.Value, outputRemove);
-                    }
+
+                    AvgWeightVector.AddWeightVector(WeightVector);
+                    inputData.Reset();
                 }
 
-                AvgWeightVector.AddWeightVector(WeightVector);
-                inputData.Reset();    
+                AvgWeightVector.DividebyNum(iterationCount);
             }
-
-            AvgWeightVector.DividebyNum(iterationCount);
 
             Console.WriteLine(DateTime.Now+" training is complete");
             

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace LocationProjectWithFeatureTemplate
 {
-    class Tags
+    public class Tags
     {
         private readonly List<string> _tags;
         public Tags(List<string> tags)

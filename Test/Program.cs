@@ -10,19 +10,37 @@ namespace Test
     {
         static void Main(string[] args)
         {
-            Class2 c2 = new Class2();
-            Class1 c1 = new Class1(c2);
-            Class2 c3 = new Class2();
-            c3 = c2;
-
-            c1.temp.Print("c1 value");
-
-            c2.dict["test"] = 234;
-            c2.value = 999;
-            c1.temp.Print("c1 value after");
-            c3.Print("c3 kprining ");
+            SecondStep();
             Console.ReadLine();
             
+        }
+
+        public static void SecondStep()
+        {
+            var input = "../../InputRawText/OutputRawText{0}.txt";
+            var output = "../../OutputText/InputToCRF{0}";
+            for (var i = 1; i < 13; i++)
+            {
+                var testInput = string.Format(input, i);
+                var testOutput = string.Format(output, i);
+                Console.WriteLine("processing: "+ testInput);
+                ProcessRawText.CreateInputForCRF(testInput, testOutput);
+            }
+        }
+
+
+        public static void FirstStep()
+        {
+            var input = "../../InputRawText/RawText{0}.txt";
+            var output = "../../InputRawText/OutputRawText{0}.txt";
+            for (var i = 1; i < 14; i++)
+            {
+                var testInput = string.Format(input, i);
+                var testOutput = string.Format(output, i);
+                Console.WriteLine("processing: " + testInput);
+                var process = new ProcessRawText(testInput, testOutput);
+                process.Process();
+            }
         }
     }
 }

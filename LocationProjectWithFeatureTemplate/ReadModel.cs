@@ -4,12 +4,13 @@ using System.IO;
 
 namespace LocationProjectWithFeatureTemplate
 {
-    class ReadModel
+    public class ReadModel
     {
+        private string fileName;
         readonly StreamReader _stream;
         public ReadModel(string file)
         {
-            string fileName = file;
+            fileName = file;
 
             try
             {
@@ -46,14 +47,16 @@ namespace LocationProjectWithFeatureTemplate
         public IEnumerable<KeyValuePair<string, string>> ModelIterator()
         {
             string line;
+            int count = 0;
             while ((line = _stream.ReadLine()) != null)
             {
+                count++;
                 line = line.Trim();
                 if (string.IsNullOrEmpty(line)) continue;
                 string[] str = line.Split(new[]{' '});
                 if (str.Length != 3 && str.Length != 2)
                 {
-                    Console.WriteLine(line + " doesn't have 2 words");
+                    Console.WriteLine(fileName + ":"+ " "+ line + " doesn't have 2 words"+ count);
                     throw new Exception();
                 }
                 else if (str.Length == 3)

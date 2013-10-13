@@ -46,6 +46,18 @@ namespace LocationProjectWithFeatureTemplate
            ThreeCapitalWords,
            AllCapsOnlyOne,     
            IsBlackListed,
+           CurrentLocNextStartCap,
+           EndswithLy,
+           EndsWithSorEd,
+           PronounWord,
+           ConjunctionWord,
+           VerbWord,
+           SandEsFollowedByTag,
+           VerbFollowedByTag,
+           EndsWithColon,
+           EndsWithLL,
+           PreceedsByA,
+           PrepositionNextTag,
         }
 
         public Features(string t2, string t1, string t, List<string> sentence, int pos)
@@ -83,14 +95,24 @@ namespace LocationProjectWithFeatureTemplate
                 FeatureEnums.ThreeCapitalWords,
                 FeatureEnums.AllCapsOnlyOne,
                 FeatureEnums.IsBlackListed,
+                FeatureEnums.CurrentLocNextStartCap,
+                FeatureEnums.EndswithLy,
+                FeatureEnums.EndsWithSorEd,
+                FeatureEnums.ConjunctionWord,
+                FeatureEnums.PronounWord,
+                FeatureEnums.VerbWord,
+                FeatureEnums.SandEsFollowedByTag,
+                FeatureEnums.VerbFollowedByTag,
+                FeatureEnums.EndsWithColon,
                 //FeatureEnums.EndsWithApostrophy
+                FeatureEnums.EndsWithLL,
+                FeatureEnums.PreceedsByA,
+                FeatureEnums.PrepositionNextTag,
             };
         }
 
         public IEnumerable<string>  GetFeatures()
         {
-            
-
             foreach (var feature in _featureList)
             {
                 switch (feature)
@@ -331,12 +353,137 @@ namespace LocationProjectWithFeatureTemplate
                     }
                     case FeatureEnums.IsBlackListed:
                     {
-                        if (Config.BlackList.Contains(Sentence[Pos]))
+                        var word = Sentence[Pos].ToLowerInvariant().Trim();
+                        if (Pos == Sentence.Count - 1)
+                        {
+                            word = word.Substring(0, word.Length - 1);
+                        }
+                        word = RemoveSymbols(word);
+                        if (Config.Instance.BlackList.Contains(word))
                         {
                             yield return "BLACKLISTED:1:" + T;
                         }
                         break;
                     }
+                    case FeatureEnums.CurrentLocNextStartCap:
+                    {
+                        if (Pos < Sentence.Count - 1)
+                        {
+                            if (T.Equals("LOCATION") && char.IsUpper(Sentence[Pos + 1][0]))
+                            {
+                                yield return "CURLOCNEXTCAP:" + Sentence[Pos + 1] + ":" + T;
+                            }
+                        }
+                        break;
+                    }
+                    case FeatureEnums.EndswithLy:
+                    {
+                        if (Sentence[Pos].ToLowerInvariant().EndsWith("ly"))
+                        {
+                            // possibly adverb
+                            yield return "ENDSWITHLY:1:" + T;
+                        }
+                        break;
+                    }
+                    case FeatureEnums.EndsWithSorEd:
+                    {
+                        var word = Sentence[Pos].ToLowerInvariant();
+                        if (word.EndsWith("es") ||
+                            word.EndsWith("ed"))
+                        {
+                            yield return "ENDSWITHSORED:1:" + T;
+                        }
+                        break;
+                    }
+                    case FeatureEnums.ConjunctionWord:
+                    {
+                        if (Config.Instance.ConjunctionSet.Contains(Sentence[Pos].ToLowerInvariant().Trim()))
+                        {
+                            yield return  "CONJUCTION:1:" + T;
+                        }
+                        break;
+                    }
+                    case FeatureEnums.VerbWord:
+                    {
+                        if (Config.Instance.VerbSet.Contains(Sentence[Pos].ToLowerInvariant().Trim()))
+                        {
+                            yield return "VERBSET:1:" + T;
+                        }
+                        break;
+                    }
+                    case FeatureEnums.PronounWord:
+                    {
+                        if (Config.Instance.PronounSet.Contains(Sentence[Pos].ToLowerInvariant().Trim()))
+                        {
+                            yield return "PRONOUN:1:" + T;
+                        }
+                        break;
+                    }
+                    case FeatureEnums.SandEsFollowedByTag:
+                    {
+                        if (Pos < Sentence.Count - 1 && char.IsUpper(Sentence[Pos+1][0]))
+                        {
+                            var word = Sentence[Pos].ToLowerInvariant().Trim();
+                            if (word.EndsWith("ed") ||
+                                word.EndsWith("es"))
+                            {
+                                yield return "SANDESFOLCAPS:1:" + T;
+                            }
+                        }
+                        break;
+                    }
+                    case FeatureEnums.VerbFollowedByTag:
+                    {
+                        if (Pos < Sentence.Count - 1 && char.IsUpper(Sentence[Pos + 1][0]))
+                        {
+                            if (Config.Instance.VerbSet.Contains(Sentence[Pos]))
+                            {
+                                yield return "VERBSETFOLCAPS:1:" + T;
+                            }
+                        }
+                        break;
+                    }
+                    case FeatureEnums.EndsWithColon:
+                    {
+                        if (Sentence[Pos].EndsWith(":"))
+                        {
+                            yield return "ENDSWITHCOLON:1:" + T;
+                        }
+                        break;
+                    }
+                    case FeatureEnums.EndsWithLL:
+                    {
+                        if (Sentence[Pos].Trim().ToLowerInvariant().EndsWith("'ll"))
+                        {
+                            yield return "ENDSWITHLL:1:" + T;
+                        }
+                        break;
+                    }
+                    case FeatureEnums.PreceedsByA:
+                    {
+                        if (Pos > 0)
+                        {
+                            var word = Sentence[Pos - 1].Trim().ToLowerInvariant();
+                            if (word.Equals("a") || word.Equals("an"))
+                            {
+                                yield return "PRECEEDSA:1:" + T;
+                            }
+                        }
+                        break;
+                    }
+                    case FeatureEnums.PrepositionNextTag:
+                    {
+                        if (Pos > 0)
+                        {
+                            var word = RemoveSymbols(Sentence[Pos -1]);
+                            if (Config.Instance.PrepositionSet.Contains(word))
+                            {
+                                yield return "PREPOSITION:" + word + ":" + T;
+                            }
+                        }
+                        break;
+                    }
+
                 }
             }
         }
@@ -371,10 +518,18 @@ namespace LocationProjectWithFeatureTemplate
                 if (IsAllUpper(Sentence[Pos]))
                     return null;
                 if (char.IsUpper(Sentence[Pos][0]) &&
-                    (char.IsUpper(Sentence[Pos + 1][0]) || Sentence[Pos].Length < 3) &&
-                    char.IsUpper(Sentence[Pos + 2][0]))
+                    (char.IsUpper(Sentence[Pos + 1][0]) || Sentence[Pos+1].Length < 4))
                 {
-                    return "THREECAPWORDS:1:" + T;
+                    if (char.IsUpper(Sentence[Pos + 2][0]))
+                    {
+                        return "THREECAPWORDS:1:" + T;
+                    }
+                    else if (Sentence[Pos + 2].Length < 4 &&
+                             Pos + 3 < Sentence.Count &&
+                             char.IsUpper(Sentence[Pos + 2][0]))
+                    {
+                        return "THREECAPWORDS:1:" + T;   
+                    }
                 }
             }
             return null;
@@ -450,10 +605,37 @@ namespace LocationProjectWithFeatureTemplate
                 return null;
             }
             // University of Washington
-            if (IsAllSmall(Sentence[Pos]) && (T1.Equals("OTHER") || Sentence[Pos].Length > 3))
+            if (IsAllSmall(Sentence[Pos]))
             {
-                return "ALLSMALLTAG:1:" + T;
+                var word = Sentence[Pos];
+                if (T1.Equals("OTHER") || word.Length > 3 || Pos == Sentence.Count - 1)
+                {
+                    return "ALLSMALLTAG:1:" + T;
+                }
+                if (Config.Instance.VerbSet.Contains(word.Trim().ToLowerInvariant()) ||
+                    Config.Instance.ArticleSet.Contains(word.Trim().ToLowerInvariant())) 
+                {
+                    if (Pos < Sentence.Count - 1)
+                    {
+                        if (char.IsLower(Sentence[Pos + 1][0]) ||
+                            IsAllNum(Sentence[Pos+1]))
+                        {
+                            return "ALLSMALLTAG:1:" + T; 
+                        }
+                    }
+                    else
+                    {
+                        return "ALLSMALLTAG:1:" + T; 
+                    }
+                }
+                word = RemoveSymbols(word);
+                Int64 result;
+                if (Int64.TryParse(word, out result))
+                {
+                    return "ALLSMALLTAG:1:" + T;
+                }
             }
+               
             //return "ALLUPPERTAG:0:" + T;
             return null;
         }
@@ -632,16 +814,20 @@ namespace LocationProjectWithFeatureTemplate
             {
                 return null;
             }
-            var input = Sentence[Pos];
-            input = RemoveApos(input);
-            input = RemoveSymbols(input);
-            var num = input.All(char.IsNumber);
+            var num = IsAllNum(Sentence[Pos]);
             if (num)
             {
                 return "NUMTAG:1:" + T;
             }
             //return "NUMTAG:0:" + T;
             return null;
+        }
+
+        private bool IsAllNum(string input)
+        {
+            input = RemoveApos(input);
+            input = RemoveSymbols(input);
+            return input.All(char.IsNumber);
         }
 
         public string GetOneLength()
@@ -735,6 +921,10 @@ namespace LocationProjectWithFeatureTemplate
             }
             input = input.Replace("'", "");
             input = input.Replace("-", "");
+            input = input.Replace("/", "");
+            input = input.Replace("(", "");
+            input = input.Replace(")", "");
+            input = input.Replace(":", "");
             return input;
         }
 

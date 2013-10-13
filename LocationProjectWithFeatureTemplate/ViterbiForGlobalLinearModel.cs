@@ -4,7 +4,7 @@ using System.Linq;
 
 namespace LocationProjectWithFeatureTemplate
 {
-    class ViterbiForGlobalLinearModel
+    public class ViterbiForGlobalLinearModel
     {
         public WeightVector WeightVector { get; set; }
         public Tags Tags { get; set; }

@@ -7,7 +7,6 @@ namespace LocationProjectWithFeatureTemplate
 {
     class MapFeaturesToK
     {
-        private readonly string _inputFile;
         private readonly List<string> _tagList;
         public Dictionary<string, int> DictFeaturesToK;
         public Dictionary<int, string> DictKToFeatures;
@@ -15,11 +14,10 @@ namespace LocationProjectWithFeatureTemplate
         private readonly WriteModel _writeModel;
         private readonly Tags _tags;
 
-        public MapFeaturesToK(string inputFile, string outputFile, List<string> tagList)
+        public MapFeaturesToK(string outputFile, List<string> tagList)
         {
             _writeModel = new WriteModel(outputFile);
 
-            _inputFile = inputFile;
             _tagList = tagList;
             DictFeaturesToK = new Dictionary<string, int>();
             DictKToFeatures = new Dictionary<int, string>();
@@ -81,22 +79,24 @@ namespace LocationProjectWithFeatureTemplate
             DictKToFeatures = newDictKtoF;
         }
 
-        public void StartMapping()
+        public void StartMapping(List<string> inputFilesList)
         {
-            var inputData = new ReadInputData(_inputFile);
-            foreach (var line in inputData.GetSentence())
+            foreach (var inputFile in inputFilesList)
             {
-                var inputTags = new List<string>(line.Count);
-                for (var j = 0; j < line.Count; j++)
+                var inputData = new ReadInputData(inputFile);
+                foreach (var line in inputData.GetSentence())
                 {
-                    var split = line[j].Split(new char[] {' '});
-                    line[j] = split[0];
-                    inputTags.Add(split[1]);
+                    var inputTags = new List<string>(line.Count);
+                    for (var j = 0; j < line.Count; j++)
+                    {
+                        var split = line[j].Split(new char[] { ' ' });
+                        line[j] = split[0];
+                        inputTags.Add(split[1]);
+                    }
+                    GenerateMappingForSentence(line);
                 }
-                GenerateMappingForSentence(line);
-
+                inputData.Reset();    
             }
-            inputData.Reset();
         }
 
         public void Dump()

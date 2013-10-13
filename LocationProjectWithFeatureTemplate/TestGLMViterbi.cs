@@ -3,7 +3,7 @@ using System.Linq;
 
 namespace LocationProjectWithFeatureTemplate
 {
-    class TestGLMViterbi
+    public class TestGLMViterbi
     {
         private readonly string _outputTestFile;
         private readonly List<string> _tagList;
@@ -11,7 +11,7 @@ namespace LocationProjectWithFeatureTemplate
         public string InputTestFile { get; set; }
         private WeightVector _weightVector;
         private Tags _tags;
-        private ViterbiForGlobalLinearModel _viterbiForGlobalLinearModel;
+        public ViterbiForGlobalLinearModel ViterbiForGLM;
 
         public TestGLMViterbi(string inputModelFile , string inputTestFile, string outputTestFile, List<string> tagList)
         {
@@ -21,7 +21,7 @@ namespace LocationProjectWithFeatureTemplate
             InputTestFile = inputTestFile;
         }
 
-        public void Setup(bool debug)
+        public void Init()
         {
             var readModel = new ReadModel(InputModelFile);
             var temp = new ReadModel(string.Concat(InputModelFile, ".featuresToK"));
@@ -35,15 +35,20 @@ namespace LocationProjectWithFeatureTemplate
 
             _tags = new Tags(_tagList);
 
-            _viterbiForGlobalLinearModel = new ViterbiForGlobalLinearModel(_weightVector, _tags);
+            ViterbiForGLM = new ViterbiForGlobalLinearModel(_weightVector, _tags);
+        }
 
+        public void Setup(bool debug)
+        {
+
+            Init();
             // read input file in a class and per line iterator.
             var inputData = new ReadInputData(InputTestFile);
             var writeModel = new WriteModel(_outputTestFile);
             foreach (var line in inputData.GetSentence())
             {
                 List<string> debugList;
-                var outputTags = _viterbiForGlobalLinearModel.DecodeNew(line, debug, out debugList);
+                var outputTags = ViterbiForGLM.DecodeNew(line, debug, out debugList);
                 if (debug)
                 {
                     writeModel.WriteDataWithTagDebug(line, outputTags, debugList);
