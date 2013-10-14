@@ -3,3 +3,16 @@ Am
 Are
 Be
 Been
+has
+have
+will
+shall
+had
+would
+could
+should
+does
+did
+do
+can
+

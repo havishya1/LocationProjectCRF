@@ -13,7 +13,9 @@ namespace LocationProjectWithFeatureTemplate
         public HashSet<string> ConjunctionSet;
         public HashSet<string> VerbSet;
         public HashSet<string> ArticleSet;
-        public HashSet<string> PrepositionSet; 
+        public HashSet<string> PrepositionSet;
+        public HashSet<string> SuffixSet;
+        public HashSet<string> AdjectiveSet; 
 
         private static Config instance;
 
@@ -23,6 +25,8 @@ namespace LocationProjectWithFeatureTemplate
         const string VerbList = "D:\\workspace\\reading\\LocationProjectCRF\\LocationProjectWithFeatureTemplate\\data\\VerbList.txt";
         const string ArticleList = "D:\\workspace\\reading\\LocationProjectCRF\\LocationProjectWithFeatureTemplate\\data\\ArticlesList.txt";
         const string PrepositionList = "D:\\workspace\\reading\\LocationProjectCRF\\LocationProjectWithFeatureTemplate\\data\\PrepositionList.txt";
+        const string SuffixList = "D:\\workspace\\reading\\LocationProjectCRF\\LocationProjectWithFeatureTemplate\\data\\SuffixList.txt";
+        const string AdjectiveList = "D:\\workspace\\reading\\LocationProjectCRF\\LocationProjectWithFeatureTemplate\\data\\AdjectiveList.txt";
 
         private Config()
         {
@@ -96,6 +100,31 @@ namespace LocationProjectWithFeatureTemplate
                 }
                 PrepositionSet.Add(word);
             }
+
+            SuffixSet = new HashSet<string>();
+            var readSuffix = new ReadModel(SuffixList);
+            foreach (var line in readSuffix.GetNextLine())
+            {
+                var word = line.ToLowerInvariant().Trim();
+                if (string.IsNullOrEmpty(word))
+                {
+                    continue;
+                }
+                SuffixSet.Add(word);
+            }
+
+            AdjectiveSet = new HashSet<string>();
+            var readAdjective = new ReadModel(AdjectiveList);
+            foreach (var line in readAdjective.GetNextLine())
+            {
+                var word = line.ToLowerInvariant().Trim();
+                if (string.IsNullOrEmpty(word))
+                {
+                    continue;
+                }
+                AdjectiveSet.Add(word);
+            }
+
         }
 
         public static Config Instance

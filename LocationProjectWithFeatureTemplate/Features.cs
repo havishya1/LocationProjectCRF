@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Globalization;
 using System.Linq;
+using System.Runtime.InteropServices;
 
 namespace LocationProjectWithFeatureTemplate
 {
@@ -14,6 +15,9 @@ namespace LocationProjectWithFeatureTemplate
         public List<string> Sentence { get; set; }
         public int Pos { get; set; }
         private readonly List<FeatureEnums> _featureList;
+        private string _currentWord;
+        private string _nextWord;
+        private string _prevWord;
 
         enum FeatureEnums
         {
@@ -58,6 +62,11 @@ namespace LocationProjectWithFeatureTemplate
            EndsWithLL,
            PreceedsByA,
            PrepositionNextTag,
+           ConjunctionNextTag,
+           ConjunctionPrevTag,
+           SuffixNextTag,
+           AdjectiveNextTag,
+           VerbProceedByTag,
         }
 
         public Features(string t2, string t1, string t, List<string> sentence, int pos)
@@ -67,6 +76,15 @@ namespace LocationProjectWithFeatureTemplate
             T = t;
             Sentence = sentence;
             Pos = pos;
+            _currentWord = sentence[Pos].ToLowerInvariant().Trim();
+            if (pos < sentence.Count - 1)
+            {
+                _nextWord = sentence[Pos + 1].ToLowerInvariant().Trim();
+            }
+            if (Pos > 0)
+            {
+                _prevWord = sentence[Pos - 1].ToLowerInvariant().Trim();
+            }
             _featureList = new List<FeatureEnums>
             {
                 //FeatureEnums.TRIGRAMTags,
@@ -108,6 +126,11 @@ namespace LocationProjectWithFeatureTemplate
                 FeatureEnums.EndsWithLL,
                 FeatureEnums.PreceedsByA,
                 FeatureEnums.PrepositionNextTag,
+                FeatureEnums.ConjunctionNextTag,
+                FeatureEnums.ConjunctionPrevTag,
+                FeatureEnums.SuffixNextTag,
+                FeatureEnums.AdjectiveNextTag,
+                FeatureEnums.VerbProceedByTag,
             };
         }
 
@@ -353,12 +376,12 @@ namespace LocationProjectWithFeatureTemplate
                     }
                     case FeatureEnums.IsBlackListed:
                     {
-                        var word = Sentence[Pos].ToLowerInvariant().Trim();
-                        if (Pos == Sentence.Count - 1)
-                        {
-                            word = word.Substring(0, word.Length - 1);
-                        }
-                        word = RemoveSymbols(word);
+                        //var word = _currentWord;
+                        //if (Pos == Sentence.Count - 1)
+                        //{
+                        //    word = word.Substring(0, word.Length - 1);
+                        //}
+                        var word = RemoveSymbols(_currentWord);
                         if (Config.Instance.BlackList.Contains(word))
                         {
                             yield return "BLACKLISTED:1:" + T;
@@ -378,7 +401,7 @@ namespace LocationProjectWithFeatureTemplate
                     }
                     case FeatureEnums.EndswithLy:
                     {
-                        if (Sentence[Pos].ToLowerInvariant().EndsWith("ly"))
+                        if (_currentWord.EndsWith("ly"))
                         {
                             // possibly adverb
                             yield return "ENDSWITHLY:1:" + T;
@@ -387,9 +410,8 @@ namespace LocationProjectWithFeatureTemplate
                     }
                     case FeatureEnums.EndsWithSorEd:
                     {
-                        var word = Sentence[Pos].ToLowerInvariant();
-                        if (word.EndsWith("es") ||
-                            word.EndsWith("ed"))
+                        if (_currentWord.EndsWith("es") ||
+                            _currentWord.EndsWith("ed"))
                         {
                             yield return "ENDSWITHSORED:1:" + T;
                         }
@@ -397,7 +419,7 @@ namespace LocationProjectWithFeatureTemplate
                     }
                     case FeatureEnums.ConjunctionWord:
                     {
-                        if (Config.Instance.ConjunctionSet.Contains(Sentence[Pos].ToLowerInvariant().Trim()))
+                        if (Config.Instance.ConjunctionSet.Contains(_currentWord))
                         {
                             yield return  "CONJUCTION:1:" + T;
                         }
@@ -405,7 +427,7 @@ namespace LocationProjectWithFeatureTemplate
                     }
                     case FeatureEnums.VerbWord:
                     {
-                        if (Config.Instance.VerbSet.Contains(Sentence[Pos].ToLowerInvariant().Trim()))
+                        if (Config.Instance.VerbSet.Contains(_currentWord))
                         {
                             yield return "VERBSET:1:" + T;
                         }
@@ -413,7 +435,7 @@ namespace LocationProjectWithFeatureTemplate
                     }
                     case FeatureEnums.PronounWord:
                     {
-                        if (Config.Instance.PronounSet.Contains(Sentence[Pos].ToLowerInvariant().Trim()))
+                        if (Config.Instance.PronounSet.Contains(_currentWord))
                         {
                             yield return "PRONOUN:1:" + T;
                         }
@@ -421,11 +443,10 @@ namespace LocationProjectWithFeatureTemplate
                     }
                     case FeatureEnums.SandEsFollowedByTag:
                     {
-                        if (Pos < Sentence.Count - 1 && char.IsUpper(Sentence[Pos+1][0]))
+                        if (Pos > 0 && char.IsUpper(Sentence[Pos][0]))
                         {
-                            var word = Sentence[Pos].ToLowerInvariant().Trim();
-                            if (word.EndsWith("ed") ||
-                                word.EndsWith("es"))
+                            if (_prevWord.EndsWith("ed") ||
+                                _prevWord.EndsWith("es"))
                             {
                                 yield return "SANDESFOLCAPS:1:" + T;
                             }
@@ -434,18 +455,40 @@ namespace LocationProjectWithFeatureTemplate
                     }
                     case FeatureEnums.VerbFollowedByTag:
                     {
-                        if (Pos < Sentence.Count - 1 && char.IsUpper(Sentence[Pos + 1][0]))
+                        if (Pos> 0 && char.IsUpper(Sentence[Pos][0]))
                         {
-                            if (Config.Instance.VerbSet.Contains(Sentence[Pos]))
+                            if (Config.Instance.VerbSet.Contains(_prevWord))
                             {
-                                yield return "VERBSETFOLCAPS:1:" + T;
+                                yield return "VERBFOLCAPS:"+_prevWord+":" + T;
                             }
                         }
                         break;
                     }
+
+                    case FeatureEnums.VerbProceedByTag:
+                    {
+                        if (Pos < Sentence.Count-2 && char.IsUpper(Sentence[Pos][0]))
+                        {
+                            if (Config.Instance.VerbSet.Contains(_nextWord))
+                            {
+                                yield return "VERBPROCEEDCAPS:"+_nextWord+ ":" + T;
+                            }
+                            else
+                            {
+                                var word = Sentence[Pos + 2].ToLowerInvariant().Trim();
+                                if (char.IsUpper(Sentence[Pos + 1][0]) &&
+                                    (Config.Instance.VerbSet.Contains(word)))
+                                {
+                                    yield return "VERBPROCEEDCAPS:" + word + ":" + T;
+                                }    
+                            }
+                        }
+                        break;
+                    }
+
                     case FeatureEnums.EndsWithColon:
                     {
-                        if (Sentence[Pos].EndsWith(":"))
+                        if (_currentWord.EndsWith(":"))
                         {
                             yield return "ENDSWITHCOLON:1:" + T;
                         }
@@ -453,7 +496,7 @@ namespace LocationProjectWithFeatureTemplate
                     }
                     case FeatureEnums.EndsWithLL:
                     {
-                        if (Sentence[Pos].Trim().ToLowerInvariant().EndsWith("'ll"))
+                        if (_currentWord.EndsWith("'ll"))
                         {
                             yield return "ENDSWITHLL:1:" + T;
                         }
@@ -463,8 +506,7 @@ namespace LocationProjectWithFeatureTemplate
                     {
                         if (Pos > 0)
                         {
-                            var word = Sentence[Pos - 1].Trim().ToLowerInvariant();
-                            if (word.Equals("a") || word.Equals("an"))
+                            if (_prevWord.Equals("a") || _prevWord.Equals("an"))
                             {
                                 yield return "PRECEEDSA:1:" + T;
                             }
@@ -475,15 +517,74 @@ namespace LocationProjectWithFeatureTemplate
                     {
                         if (Pos > 0)
                         {
-                            var word = RemoveSymbols(Sentence[Pos -1]);
+                            var word = RemoveSymbols(_prevWord);
                             if (Config.Instance.PrepositionSet.Contains(word))
                             {
-                                yield return "PREPOSITION:" + word + ":" + T;
+                                yield return "PREPOSITIONFOLLOW:" + word + ":" + T;
+                            }
+                        }
+                        break;
+                    }
+                    case FeatureEnums.ConjunctionNextTag:
+                    {
+                        if (Pos > 0)
+                        {
+                            if (Config.Instance.ConjunctionSet.Contains(_prevWord))
+                            {
+                                yield return "CONJUNCNEXTTAG:" + _prevWord + ":" + T;
                             }
                         }
                         break;
                     }
 
+                    case FeatureEnums.ConjunctionPrevTag:
+                    {
+                        if (Pos < Sentence.Count-2)
+                        {
+                            if (Config.Instance.ConjunctionSet.Contains(_nextWord))
+                            {
+                                yield return "CONJUNCPRETAG:" + _nextWord + ":" + T;
+                            }
+                            var word = Sentence[Pos + 2].ToLowerInvariant().Trim();
+                            if (char.IsUpper(Sentence[Pos][0]) &&
+                                char.IsUpper(Sentence[Pos+1][0]) &&
+                                Config.Instance.ConjunctionSet.Contains(word))
+                            {
+                                yield return "CONJUNCPRETAG:" + word + ":" + T;
+                            }
+                        }
+                        break;
+                    }
+                    case FeatureEnums.SuffixNextTag:
+                    {
+                        if (Pos > 0 && _prevWord.Length > 3)
+                        {
+                            var suffixSet = Config.Instance.SuffixSet;
+                            var length = _prevWord.Length;
+                            for (int i = 1; (i < 9) && (length > i); i++)
+                            {
+                                var suffix = _prevWord.Substring(length - i, i);
+                                if (suffixSet.Contains(suffix))
+                                {
+                                    yield return "SUFFNEXTTAG:" + suffix + ":" + T;
+                                }
+                            }
+                        }
+                        break;
+                    }
+                       
+                    case FeatureEnums.AdjectiveNextTag:
+                    {
+                        if (Pos > 0)
+                        {
+                            if (char.IsLower(Sentence[Pos - 1][0]) &&
+                                Config.Instance.AdjectiveSet.Contains(_prevWord))
+                            {
+                                yield return "ADJUCNEXTTAG:" + _prevWord + ":" + T;
+                            }
+                        }
+                        break;
+                    }
                 }
             }
         }
@@ -607,13 +708,13 @@ namespace LocationProjectWithFeatureTemplate
             // University of Washington
             if (IsAllSmall(Sentence[Pos]))
             {
-                var word = Sentence[Pos];
-                if (T1.Equals("OTHER") || word.Length > 3 || Pos == Sentence.Count - 1)
+                //var word = Sentence[Pos];
+                if (T1.Equals("OTHER") || _currentWord.Length > 3 || Pos == Sentence.Count - 1)
                 {
                     return "ALLSMALLTAG:1:" + T;
                 }
-                if (Config.Instance.VerbSet.Contains(word.Trim().ToLowerInvariant()) ||
-                    Config.Instance.ArticleSet.Contains(word.Trim().ToLowerInvariant())) 
+                if (Config.Instance.VerbSet.Contains(_currentWord) ||
+                    Config.Instance.ArticleSet.Contains(_currentWord)) 
                 {
                     if (Pos < Sentence.Count - 1)
                     {
@@ -628,7 +729,7 @@ namespace LocationProjectWithFeatureTemplate
                         return "ALLSMALLTAG:1:" + T; 
                     }
                 }
-                word = RemoveSymbols(word);
+                var word = RemoveSymbols(_currentWord);
                 Int64 result;
                 if (Int64.TryParse(word, out result))
                 {
