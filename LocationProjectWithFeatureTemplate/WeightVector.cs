@@ -134,16 +134,41 @@ namespace LocationProjectWithFeatureTemplate
 
                 if (double.IsNaN(value) || double.IsInfinity(value) || double.IsNegativeInfinity(value))
                 {
-                    Console.WriteLine("weightvector setting NAN k:" + key + " weight: " + Get(key));
+                    Console.WriteLine("weightvector setting NAN k:" + key + " weight: " + Get(key) + " value: " + value);
                     value = double.MaxValue;
                 }
                 WeightArray[key] = value;
             }         
         }
 
-        public void DividebyNum(int number)
+        public void MaxNormalize()
         {
-            for (int i = 0; i < WeightArray.Length; i++)
+            double max = 0;
+            for (int i = 0; i < FeatureCount; i++)
+            {
+                if (max < Math.Abs(WeightArray[i]))
+                {
+                    max = Math.Abs(WeightArray[i]);   
+                }
+            }
+
+            DividebyNum(max);
+        }
+
+        public void AvgNormalize()
+        {
+            double sum = 0;
+            for (int i = 0; i < FeatureCount; i++)
+            {
+                sum += Math.Abs(WeightArray[i]);
+                
+            }
+            DividebyNum(sum/(double)FeatureCount);
+        }
+
+        public void DividebyNum(double number)
+        {
+            for (int i = 0; i < FeatureCount; i++)
             {
                 WeightArray[i] /= number;
             }

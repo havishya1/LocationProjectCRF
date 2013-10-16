@@ -63,20 +63,21 @@ namespace LocationProjectWithFeatureTemplate
                 }
             }
 
-            if (normalize)
-            {
-                for (int i = 0; i < featureCount; i++)
-                {
-                    if (Math.Abs(weightVector.WeightArray[i]) >= limit)
-                    {
-                        newWeights[featureCount] /= max;
-                    }
-                }
-            }
+            //if (normalize)
+            //{
+            //    for (int i = 0; i < featureCount; i++)
+            //    {
+            //        newWeights[i] /= max;
+            //    }
+            //}
             weightVector.WeightArray = newWeights;
             weightVector.FeatureCount = featureCount;
             DictFeaturesToK = weightVector.FeatureKDictionary = newDictFtoK;
             DictKToFeatures = newDictKtoF;
+            if (normalize)
+            {
+                weightVector.AvgNormalize();
+            }
         }
 
         public void StartMapping(List<string> inputFilesList)

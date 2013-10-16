@@ -35,17 +35,21 @@ namespace LocationProjectWithFeatureTemplate
                 Pi.Add(new Dictionary<string, double>());
                 Bp.Add(new Dictionary<string, string>());
                 var previousTag = "*";
+                var prePreviousTag = "*";
                 if (k > 0)
                 {
                     previousTag = outputTags[k - 1];
+                    if (k > 1)
+                    {
+                        prePreviousTag = outputTags[k - 2];
+                    }
                 }
                 
                 foreach (var t in Tags.GetNGramTags(1))
                 {
                     string debugStr;
                     var tagsKey = previousTag + ":" + t;
-                    var newTemp = "*:" + tagsKey ;
-                    double previousValue = 0;
+                    var newTemp = prePreviousTag + ":" + tagsKey ;
                     
                     if (k > 0)
                     {

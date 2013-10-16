@@ -18,6 +18,7 @@ namespace LocationProjectWithFeatureTemplate
         private readonly List<List<string>> _outputTagsList;
         private readonly List<string> _tagList;
         private readonly double _lambda;
+        private readonly double _learningParam;
         private readonly FeatureCache _cache;
         private List<ForwardBackwordAlgo> forwardBackwordAlgos;
         private WeightVector _weightVector;
@@ -25,13 +26,14 @@ namespace LocationProjectWithFeatureTemplate
         private KeyValuePair<string,string>[] _twoGramPair;
 
         public ComputeGradient(List<List<string>> inputSentence, List<List<string>> tagsList,
-            List<string> tagList, double lambda, FeatureCache cache, WriteModel logger)
+            List<string> tagList, double lambda, double learningParam, FeatureCache cache, WriteModel logger)
         {
             Logger = logger;
             _inputSentence = inputSentence;
             _outputTagsList = tagsList;
             _tagList = tagList;
             _lambda = lambda;
+            _learningParam = learningParam;
             _cache = cache;
             forwardBackwordAlgos = new List<ForwardBackwordAlgo>();
             _weightVector = null;
@@ -71,7 +73,7 @@ namespace LocationProjectWithFeatureTemplate
             //        dictKtoFeature[weight.Key], weight.Value));
             //}
             output.Flush();
-            Logger.Flush();
+            //Logger.Flush();
         }
 
         private void SetForwardBackwordAlgo(WeightVector weightVector)
@@ -127,7 +129,12 @@ namespace LocationProjectWithFeatureTemplate
                     ComputeRange(0, _weightVector.FeatureCount, newWeightVector);
                 }
                 _weightVector = newWeightVector;
+                if (iter + 1 < iterationCount)
+                {
+                    _weightVector.AvgNormalize();
+                }
             }
+            _weightVector.AvgNormalize();
             return _weightVector;
         }
 
@@ -143,8 +150,8 @@ namespace LocationProjectWithFeatureTemplate
                 var wk = Compute(k);
                 if (double.IsNaN(wk) || double.IsInfinity(wk))
                 {
-                    Logger.WriteLine("k: "+ k + "wk is infiity of nana"+ wk);
-                    Logger.Flush(false);
+                    Console.WriteLine("k: "+ k + "wk is infiity of nana"+ wk);
+                    //Logger.Flush(false);
                 }
                 newWeightVector.SetKey(k, wk);
             }
@@ -161,33 +168,26 @@ namespace LocationProjectWithFeatureTemplate
             {
                 throw new Exception("counts dont match "+ _inputSentence.Count + "with "+ _outputTagsList.Count);
             }
+            double firstTerm = 0;
+            double secondTerm = 0;
 
             for (lineIndex = 0; lineIndex< _inputSentence.Count; lineIndex++)
             {
                 var outputTags = _outputTagsList[lineIndex];
-                
-                //if (_weightVector.WeightArray[k] > 0)
-                //{
-                //    BigInteger initOutputBig = 0;
-                //    initOutputBig = GetAllFeatureKFromCacheInBig(outputTags, k, lineIndex);
-                //    initOutputBig -= (BigInteger)CalculateGradient(outputTags, k,
-                //    lineIndex, kstring);
 
-                //    outputBigInteger += initOutputBig;
-                //}
-                //else
-                {
-                    double initOutputDouble = 0;
-                    initOutputDouble = GetAllFeatureKFromCache(outputTags, k, lineIndex);
-                    initOutputDouble -= CalculateGradient(outputTags, k,
-                    lineIndex, kstring);
+                //double initOutputDouble = 0;
+                firstTerm += GetAllFeatureKFromCache(outputTags, k, lineIndex);
+                secondTerm += CalculateGradient(outputTags, k,
+                lineIndex, kstring);
 
-                    outputDouble += initOutputDouble;
-                }
+                //outputDouble += initOutputDouble;
             }
+            outputDouble = firstTerm - secondTerm;
 
-            var finalOutput = outputDouble + (double)outputBigInteger - (_lambda * _weightVector.Get(k));
-            finalOutput = _weightVector.Get(k) + (_lambda * finalOutput);
+            var finalOutput = outputDouble - (_lambda * _weightVector.Get(k));
+            //Console.WriteLine(k + " updating from " + _weightVector.Get(k) + " finalOutput : " + finalOutput +
+            //    "first: "+firstTerm + " second: "+secondTerm);
+            finalOutput = _weightVector.Get(k) + (_learningParam * finalOutput);
             return finalOutput;
         }
 
@@ -217,9 +217,9 @@ namespace LocationProjectWithFeatureTemplate
                     sum += value;
                     //if (double.IsNaN(sum) || double.IsInfinity(sum) || double.IsNegativeInfinity(sum))
                     //{
-                    //    Logger.WriteLine("sum is NAN k:" + k + " weight: " + _weightVector.Get(k) + " value is: " +
-                    //                      value);
-                    //    Logger.Flush(false);
+                    //    Console.WriteLine("sum is NAN k:" + k + " weight: " + _weightVector.Get(k) + " value is: " +
+                    //                      value +"sum= "+sum);
+                    //    //Logger.Flush(false);
                     //}
                 }
             }

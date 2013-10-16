@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LocationProjectWithFeatureT
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Test", "Test\Test.csproj", "{788A9716-2BDE-415F-9780-202B380F0A70}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LocationWebsite", "LocationWebsite\LocationWebsite.csproj", "{2EE2A07C-3096-4BF1-A6DF-C1867CC03790}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -25,6 +27,10 @@ Global
 		{788A9716-2BDE-415F-9780-202B380F0A70}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{788A9716-2BDE-415F-9780-202B380F0A70}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{788A9716-2BDE-415F-9780-202B380F0A70}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2EE2A07C-3096-4BF1-A6DF-C1867CC03790}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2EE2A07C-3096-4BF1-A6DF-C1867CC03790}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2EE2A07C-3096-4BF1-A6DF-C1867CC03790}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2EE2A07C-3096-4BF1-A6DF-C1867CC03790}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

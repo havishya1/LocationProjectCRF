@@ -30,3 +30,7 @@ GMT
 UTC
 A.M.
 P.M.
+ie
+i.e.
+etc
+etc.

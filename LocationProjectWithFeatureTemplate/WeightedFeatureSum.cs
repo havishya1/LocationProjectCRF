@@ -43,6 +43,7 @@ namespace LocationProjectWithFeatureTemplate
                 var val = Math.Exp(sum);
                 if (double.IsInfinity(val))
                 {
+                    Console.WriteLine("GetFeatureValue is infinite. return just value: "+sum);
                     return sum;
                 }
                 return val;

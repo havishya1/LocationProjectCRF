@@ -19,6 +19,7 @@ namespace LocationProjectWithFeatureTemplate
             float correct = 0;
             float found = 0;
             float line = 0;
+            int total = 0;
 
             string dump;
             while (keyIter.MoveNext() && devIter.MoveNext())
@@ -46,9 +47,10 @@ namespace LocationProjectWithFeatureTemplate
                 {
                     found++;
                 }
+                total++;
             }
 
-            dump = "found: " + found + " expected: " + expected + " correct: " + correct +"\r\n";
+            dump = "total: "+total+" found: " + found + " expected: " + expected + " correct: " + correct +"\r\n";
             dumpOutputModel.WriteLine(dump);
             float precision = correct/found;
             float recall = correct/expected;

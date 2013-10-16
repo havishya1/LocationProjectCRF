@@ -113,7 +113,7 @@ namespace LocationProjectWithFeatureTemplate
 
         public void Dump()
         {
-            var output = new WriteModel(string.Concat(_outputFile, ""));
+            var output = new WriteModel(string.Concat(_outputFile, ".preceptron"));
             
             for (int index = 0; index < WeightVector.FeatureCount; index++)
             {

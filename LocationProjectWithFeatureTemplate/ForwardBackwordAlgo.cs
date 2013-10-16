@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Numerics;
+using System.Runtime.InteropServices;
 using System.Security.Policy;
 using System.Security.Principal;
 using System.Text;
@@ -27,6 +28,8 @@ namespace LocationProjectWithFeatureTemplate
         private string[] _twoGramsList;
         private List<double> cList;
         private List<double> dList;
+        private bool _useScaling;
+        private bool _useLog;
 
         public ForwardBackwordAlgo(List<string> inputSentence, WeightVector wc, List<string> tagList)
         {
@@ -41,6 +44,8 @@ namespace LocationProjectWithFeatureTemplate
             _weightedFeaturesum = new WeightedFeatureSum(wc, inputSentence, true);
             cList = new List<double>(_inputSentence.Count);
             dList = new List<double>(_inputSentence.Count);
+            _useScaling = true;
+            _useLog = false;
 
             _twoGramsList = new string[4];
             var ngramTags = new Tags(_tagList);
@@ -63,7 +68,23 @@ namespace LocationProjectWithFeatureTemplate
             {
                 if (UabDictionary[j].ContainsKey(a+"#"+b))
                 {
-                    return UabDictionary[j][a + "#" + b]/Z;
+                    double value = 0;
+                    if (_useLog)
+                    {
+                        value = UabDictionary[j][a + "#" + b] - Z;
+                        return Math.Exp(value);
+                    }
+                    else
+                    {
+                        value = UabDictionary[j][a + "#" + b] / Z;
+                    }
+                    //if (double.IsInfinity(value) || double.IsNaN(value) || double.IsNegativeInfinity(value))
+                    //{
+                    //    Console.WriteLine("value: "+value + "j: "+j +"a#b: "+a+"#"+b);
+                    //    Console.WriteLine("UabDictionary[j][a b] = " + UabDictionary[j][a + "#" + b]);
+                    //    Console.WriteLine("Z: "+Z);
+                    //}
+                    return value;
                 }
             }
             return 0;
@@ -73,28 +94,9 @@ namespace LocationProjectWithFeatureTemplate
         {
             InitAlpha();
             InitBeta();
-            //ValidateCListAndDlist();
             InitUab();
             Z = (Z != 0) ? Z : 1;
         }
-
-        //private void ValidateCListAndDlist()
-        //{
-        //    int count = _inputSentence.Count-1;
-            
-        //    Console.WriteLine("c["+count+"]="+cList[count]+" == td["+0+"]="+dList[0]);
-        //    Console.WriteLine("diff = " + (cList[count] - dList[0]));
-
-        //    Console.ReadLine();
-
-        //    for (int i = 0; i < count; i++)
-        //    {
-        //        //Console.WriteLine("c["+i+"]="+cList[i]+"\td["+(i+1)+"]="+dList[i+1]);
-        //        Console.WriteLine("multiply: c["+i+"] * d["+(i+1)+"]="+ (cList[i] * dList[i+1]));
-        //        Console.WriteLine("diff= " + ((cList[i] * dList[i + 1]) - cList[count]));
-        //    }
-        //    Console.ReadLine();
-        //}
 
         private void InitUab()
         {
@@ -109,9 +111,24 @@ namespace LocationProjectWithFeatureTemplate
                     for (int i = 0; i < _inputSentence.Count - 1; i++)
                     {
                         var key = tag + "#" + itag;
-                        var w = _weightedFeaturesum.GetFeatureValue("*", tag, itag, i);
-                        var value = _alphaDictionary[i][tag]*w*_betaDictionary[i][itag];
+                        var w = _weightedFeaturesum.GetFeatureValue("*", tag, itag, i+1);
+                        double value = 0;
+                        if (_useLog)
+                        {
+                            value = Math.Log(_alphaDictionary[i][tag]) + Math.Log(w) + Math.Log(_betaDictionary[i+1][itag]);
+                        }
+                        else
+                        {
+                            value = _alphaDictionary[i][tag] * w * _betaDictionary[i+1][itag];
+                        }
                         UabDictionary[i][key] = value;
+                        if (double.IsInfinity(value) || double.IsNaN(value))
+                        {
+                            Console.WriteLine("i: "+i+" uab value is: "+ value);
+                            Console.WriteLine("_alphaDictionary[i][tag]: "+_alphaDictionary[i][tag]);
+                            Console.WriteLine("inituab w: "+w);
+                            Console.WriteLine("_betaDictionary[i][itag]: "+_betaDictionary[i+1][itag]);
+                        }
                     }
                 }
             }
@@ -123,7 +140,14 @@ namespace LocationProjectWithFeatureTemplate
             foreach (var tag in _tagList)
             {
                 // initialize.
-                _betaDictionary[_inputSentence.Count - 1].Add(tag, 1.0/ cList[_inputSentence.Count - 1]);
+                if (_useScaling)
+                {
+                    _betaDictionary[_inputSentence.Count - 1].Add(tag, 1.0/cList[_inputSentence.Count - 1]);
+                }
+                else
+                {
+                    _betaDictionary[_inputSentence.Count - 1].Add(tag, 1.0);                
+                }
             }
                 
             for (var i = _inputSentence.Count - 2 ; i >= 0; i--)
@@ -134,15 +158,35 @@ namespace LocationProjectWithFeatureTemplate
                     double betaParts = 0;
                     foreach (var itag in _tagList)
                     {
-                        var temp = _weightedFeaturesum.GetFeatureValue("*", tag, itag, i+1);
+                        if (_betaDictionary[i + 1][itag] == 0)
+                        {
+                            continue;
+                        }
+                        var temp = _weightedFeaturesum.GetFeatureValue("*", tag, itag, i + 1);
                         betaParts += (temp * _betaDictionary[i + 1][itag]);
+                        if (double.IsInfinity(betaParts) || double.IsNaN(betaParts))
+                        {
+                            Console.WriteLine("beta betaParts: " + betaParts + " temp: " + temp + "cList[i]: " +
+                                " _betaDictionary[i + 1][itag]: " + _betaDictionary[i + 1][itag]);
+                            Thread.Sleep(10000);
+                        }
                     }
-                    //if (double.IsInfinity(betaParts))
-                    //{
-                    //    Console.WriteLine("beta betaParts is infinity");
-                    //    Thread.Sleep(1000);
-                    //}
-                    _betaDictionary[i][tag] = betaParts / cList[i];
+                    
+                    if (_useScaling)
+                    {
+                        _betaDictionary[i][tag] = betaParts/cList[i];
+                    }
+                    else
+                    {
+                        _betaDictionary[i][tag] = betaParts;
+                    }
+
+                    if (double.IsInfinity(_betaDictionary[i][tag]) || double.IsNaN(_betaDictionary[i][tag]))
+                    {
+                        Console.WriteLine("beta betaParts: " + betaParts + " _betaDictionary[i][tag]: " + _betaDictionary[i][tag] +
+                            "cList[i]: ");
+                        Thread.Sleep(10000);
+                    }
                 }
             }
         }
@@ -155,15 +199,24 @@ namespace LocationProjectWithFeatureTemplate
             {
                 // initialize.
                 var tagExpectation = _weightedFeaturesum.GetFeatureValue("*", "*", tag, 0);
+                //if (double.IsNaN(tagExpectation) || double.IsInfinity(tagExpectation))
+                //{
+                //    Console.WriteLine("tagExpectation is NaN initalpha");
+                //}
                 _alphaDictionary[0].Add(tag, tagExpectation);
+                
                 sum += tagExpectation;
             }
-            cList.Add(sum);
-            //Console.WriteLine(cList.Count-1 +"value:"+ cList[cList.Count-1]);
-            foreach (var tag in _tagList)
+            if (_useScaling)
             {
-                // scale to 1.
-                _alphaDictionary[0][tag] = _alphaDictionary[0][tag] / sum;
+                sum = (sum == 0) ? 1 : sum;
+                cList.Add(sum);
+                //Console.WriteLine(cList.Count-1 +"value:"+ cList[cList.Count-1]);
+                foreach (var tag in _tagList)
+                {
+                    // scale to 1.
+                    _alphaDictionary[0][tag] = _alphaDictionary[0][tag]/sum;
+                }
             }
 
             for (var i = 1; i < _inputSentence.Count; i++)
@@ -180,29 +233,42 @@ namespace LocationProjectWithFeatureTemplate
                     }
                     _alphaDictionary[i][tag] = alphaParts;
                     sum += alphaParts;
-                    //if (double.IsInfinity(alphaParts))
+                    //if (double.IsInfinity(alphaParts) || double.IsNaN(alphaParts))
                     //{
                     //    Console.WriteLine("alpha alphaParts is infinity");
                     //    Thread.Sleep(1000);
                     //}
                 }
-                //if (double.IsInfinity(sum))
+
+                //if (double.IsInfinity(sum) || double.IsNaN(sum))
                 //{
-                //    Console.WriteLine("alpha sum is infinity");
+                //    Console.WriteLine("alpha sum: "+sum +" is infinity. i: "+ i);
                 //    Thread.Sleep(1000);
                 //}
-
-                foreach (var tag in _tagList)
+                if (_useScaling)
                 {
-                    _alphaDictionary[i][tag] /= sum;
+                    sum = (sum == 0) ? 1 : sum;
+
+                    if (sum < 1 && sum > -1)
+                    {
+                        sum = 1.0;
+                    }
+                    foreach (var tag in _tagList)
+                    {
+                        _alphaDictionary[i][tag] /= sum;
+                    }
+                    cList.Add(sum);
                 }
-                cList.Add(sum);
                 //Console.WriteLine(cList.Count - 1 + "value:" + cList[cList.Count - 1]);
             }
 
             foreach (var tag in _tagList)
             {
                 Z += _alphaDictionary[_inputSentence.Count - 1][tag];
+            }
+            if (_useLog)
+            {
+                Z = Math.Log(Z);
             }
 
         }

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
+using System.Reflection.Emit;
 using System.Text;
 using System.Threading.Tasks;
 using LocationProjectWithFeatureTemplate;
@@ -16,7 +17,7 @@ namespace LocationProjectWithFeatureTemplate
             var tags = new List<string> { "LOCATION", "OTHER" };
             //ReadNewsWireData();
             TrainingTest(tags);
-            Test1(tags, true, true);
+            Test1(tags, false, true);
 
             //const string modelFile = "../../data/tag.model";
             //const string input = "../../data/gene.test";
@@ -41,6 +42,8 @@ namespace LocationProjectWithFeatureTemplate
                 "../../data/training/APW_19980314_parsed.key",
                 "../../data/training/APW_19980424_parsed.key",
                 "../../data/training/APW_19980429_parsed.key",
+                //"../../data/training/NYT_19980315_parsed.key",
+                //"../../data/training/NYT_19980407_parsed.key",
                 "../../data/travelTraining/InputToCRF1.key",
                 "../../data/travelTraining/InputToCRF2.key",
                 "../../data/travelTraining/InputToCRF3.key",
@@ -51,26 +54,39 @@ namespace LocationProjectWithFeatureTemplate
                 "../../data/travelTraining/InputToCRF8.key",
                 "../../data/travelTraining/InputToCRF9.key",
                 "../../data/travelTraining/InputToCRF10.key",
+                //"../../data/travelTraining/InputToCRF11.key",
+                //"../../data/travelTraining/InputToCRF12.key",
             };
-            const string modelFile = "../../data/training/tag.model.trial1";
+            const string modelFile = "../../data/tag.model.trial1";
             const string input = "../../data/training/NYT_19980403_parsed.key";
             string LoggerFile = "../../Logs/Log_"+DateTime.Now.ToFileTime()+".txt";
-            const int threadCount = 1;
+            const int threadCount = 8;
             var perceptron = new Perceptron(inputFiles.ToList(), modelFile, tags, false);
             perceptron.Train(inputFiles);
             perceptron.ReMapFeatureToK(true);
             perceptron.Dump();
             perceptron.MapFeatures.Dump();
-            //perceptron.ReadInputs();
-            //var featureCache = new FeatureCache(perceptron.InputSentences, tags,
-            //    perceptron.MapFeatures.DictFeaturesToK);
-            //featureCache.CreateCache();
-            //var logger = new WriteModel(LoggerFile);
-            //var gradient = new ComputeGradient(perceptron.InputSentences, perceptron.TagsList,
-            //    tags, .1, featureCache, logger);
-            ////perceptron.WeightVector.ResetAllToZero();
-            //gradient.RunIterations(perceptron.WeightVector, 10, threadCount);
-            //gradient.Dump(modelFile, perceptron.MapFeatures.DictKToFeatures);
+
+            ComputeGradient gradient = null;
+            var logger = new WriteModel(LoggerFile);
+            for (int i = 0; i < 1; i++)
+            {
+                perceptron.ReadInputs(inputFiles[i]);
+                var featureCache = new FeatureCache(perceptron.InputSentences, tags,
+                    perceptron.MapFeatures.DictFeaturesToK);
+                featureCache.CreateCache();
+                
+                const double lambda = 0;
+                const double learningParam = .1;
+                gradient = new ComputeGradient(perceptron.InputSentences, perceptron.TagsList,
+                    tags, lambda, learningParam, featureCache, logger);
+                //perceptron.WeightVector.ResetAllToZero();
+                gradient.RunIterations(perceptron.WeightVector, 10, threadCount);
+            }
+            if (gradient != null)
+            {
+                gradient.Dump(modelFile, perceptron.MapFeatures.DictKToFeatures);
+            }
         }
 
         static void Test1(List<string> tags, bool debug, bool eval)
@@ -102,7 +118,7 @@ namespace LocationProjectWithFeatureTemplate
                 string outputFile = inputFile + ".dev.output1";
                 string keyFile = inputFile + ".key";
                 string outputEval = inputFile + ".dev.evalDump";
-                const string modelFile = "../../data/training/tag.model.trial1";
+                const string modelFile = "../../data/tag.model.trial1";
 
                 var testGLMViterbi = new TestGLMViterbi(modelFile, input, outputFile, tags);
                 testGLMViterbi.Setup(debug);
