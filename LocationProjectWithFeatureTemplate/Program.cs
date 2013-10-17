@@ -81,7 +81,8 @@ namespace LocationProjectWithFeatureTemplate
                 gradient = new ComputeGradient(perceptron.InputSentences, perceptron.TagsList,
                     tags, lambda, learningParam, featureCache, logger);
                 //perceptron.WeightVector.ResetAllToZero();
-                gradient.RunIterations(perceptron.WeightVector, 10, threadCount);
+                //gradient.RunIterations(perceptron.WeightVector, 10, threadCount);
+                gradient.RunLBFGAlgo(perceptron.WeightVector);
             }
             if (gradient != null)
             {

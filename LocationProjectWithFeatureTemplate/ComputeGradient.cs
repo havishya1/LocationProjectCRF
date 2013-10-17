@@ -24,6 +24,7 @@ namespace LocationProjectWithFeatureTemplate
         private WeightVector _weightVector;
         private string[] _twoGramsList;
         private KeyValuePair<string,string>[] _twoGramPair;
+        public Dictionary<string, int> FeatureKDictionary;
 
         public ComputeGradient(List<List<string>> inputSentence, List<List<string>> tagsList,
             List<string> tagList, double lambda, double learningParam, FeatureCache cache, WriteModel logger)
@@ -118,7 +119,7 @@ namespace LocationProjectWithFeatureTemplate
                         doneEvents[threadIndex] = new ManualResetEvent(false);
 
                         var info = new ThreadInfoObject(this, start, end, newWeightVector,
-                            doneEvents[threadIndex]);
+                            doneEvents[threadIndex], null);
                         ThreadPool.QueueUserWorkItem(info.StartGradientComputing, threadIndex);
                     }
 
@@ -162,7 +163,6 @@ namespace LocationProjectWithFeatureTemplate
             BigInteger outputBigInteger = 0;
             double outputDouble = 0;
             int lineIndex = 0;
-            string kstring = "@#" + k.ToString(CultureInfo.InvariantCulture);
 
             if (_inputSentence.Count != _outputTagsList.Count)
             {
@@ -170,19 +170,19 @@ namespace LocationProjectWithFeatureTemplate
             }
             double firstTerm = 0;
             double secondTerm = 0;
-
+            string kstring = "@#" + k.ToString(CultureInfo.InvariantCulture);
             for (lineIndex = 0; lineIndex< _inputSentence.Count; lineIndex++)
             {
                 var outputTags = _outputTagsList[lineIndex];
 
-                //double initOutputDouble = 0;
-                firstTerm += GetAllFeatureKFromCache(outputTags, k, lineIndex);
-                secondTerm += CalculateGradient(outputTags, k,
+                double initOutputDouble = 0;
+                initOutputDouble += GetAllFeatureKFromCache(outputTags, k, lineIndex);
+                initOutputDouble -= CalculateGradient(outputTags, k,
                 lineIndex, kstring);
 
-                //outputDouble += initOutputDouble;
+                outputDouble += initOutputDouble;
             }
-            outputDouble = firstTerm - secondTerm;
+            //outputDouble = firstTerm - secondTerm;
 
             var finalOutput = outputDouble - (_lambda * _weightVector.Get(k));
             //Console.WriteLine(k + " updating from " + _weightVector.Get(k) + " finalOutput : " + finalOutput +
@@ -271,7 +271,8 @@ namespace LocationProjectWithFeatureTemplate
             return sum;
         }
 
-        public double GetAllFeatureKFromCacheWithWeights(List<string> tags, int k, int lineIndex)
+        public double GetAllFeatureKFromCacheWithWeights(List<string> tags, int k,
+            int lineIndex, WeightVector weightVector)
         {
             double sum = 0;
             for (var pos = 0; pos < tags.Count; pos++)
@@ -283,24 +284,124 @@ namespace LocationProjectWithFeatureTemplate
                 }
                 if (_cache.Contains(prevTag, tags[pos], k, pos, lineIndex))
                 {
-                    var val = Math.Exp(_weightVector.Get(k));
-                    if (double.IsInfinity(val))
-                    {
-                        sum += _weightVector.Get(k);
-                    }
-                    else
-                    {
-                        sum += val;
-                    }
-                    //if (double.IsNaN(sum) || double.IsInfinity(sum) || double.IsNegativeInfinity(sum))
-                    //{
-                    //    Logger.WriteLine("sum is NAN k:"+k +" weight: "+_weightVector.Get(k));
-                    //    Logger.Flush(false);
-                    //}
+                    //var val = Math.Exp(_weightVector.Get(k));
+                    sum += (_weightVector.Get(k));
                 }
             }
             return sum;
         }
+
+        public void RunLBFGAlgo(WeightVector weightVector)
+        {
+            double epsg = 0.0000000001;
+            double epsf = 0;
+            double epsx = 0;
+            int maxits = 50;
+            alglib.minlbfgsstate state;
+            alglib.minlbfgsreport rep;
+
+            _weightVector = weightVector;
+            this.FeatureKDictionary = weightVector.FeatureKDictionary;
+
+            alglib.minlbfgscreate(5, weightVector.WeightArray, out state);
+            alglib.minlbfgssetcond(state, epsg, epsf, epsx, maxits);
+            alglib.minlbfgsoptimize(state, GetFunctionValueAndGradient, null, this);
+            double[] output;
+            alglib.minlbfgsresults(state, out output, out rep);
+            weightVector.WeightArray = output;
+
+            System.Console.WriteLine("{0}", rep.terminationtype); // EXPECTED: 4
+            //System.Console.WriteLine("{0}", alglib.ap.format(x, 2)); // EXPECTED: [-3,3]
+            //System.Console.ReadLine();
+            
+        }
+
+        public static void GetFunctionValueAndGradient(double[] weights, ref double func,
+            double[] grad, object obj)
+        {
+            var gradient = (ComputeGradient)obj;
+            var weightVector = gradient._weightVector.DeepCopy();
+            weightVector.WeightArray = weights;
+
+            gradient.SetForwardBackwordAlgo(weightVector);
+            func = gradient.ComputeFunctionValue(weightVector);
+            //gradient.ComputeGradientValues(weightVector, grad, 0, weightVector.FeatureCount);
+            gradient.ComputeGradientMultiThread(weightVector, grad, 8);
+
+        }
+
+        public double ComputeFunctionValue(WeightVector weightVector)
+        {
+            double outputDouble = 0;
+
+            for (var lineIndex = 0; lineIndex < _inputSentence.Count; lineIndex++)
+            {
+                var outputTags = _outputTagsList[lineIndex];
+
+                double initOutputDouble = 0;
+                for (var k = 0; k < weightVector.FeatureCount; k++)
+                {
+                    initOutputDouble += GetAllFeatureKFromCacheWithWeights(outputTags, k,
+                        lineIndex, weightVector);
+                }
+                initOutputDouble -= Math.Log(forwardBackwordAlgos[lineIndex].Z);
+
+                outputDouble += initOutputDouble;
+            }
+            return -outputDouble;
+        }
+
+        public void ComputeGradientValues(WeightVector weightVector, double[] gradient,
+            int startIndex, int endIndex )
+        {
+            for (var k = startIndex; k < endIndex; k++)
+            {
+                double outputDouble = 0;
+
+                var kstring = "@#" + k.ToString(CultureInfo.InvariantCulture);
+                for (var lineIndex = 0; lineIndex < _inputSentence.Count; lineIndex++)
+                {
+                    var outputTags = _outputTagsList[lineIndex];
+
+                    double initOutputDouble = 0;
+                    initOutputDouble += GetAllFeatureKFromCache(outputTags, k, lineIndex);
+                    initOutputDouble -= CalculateGradient(outputTags, k,
+                        lineIndex, kstring);
+
+                    outputDouble += initOutputDouble;
+                }
+
+                gradient[k] = outputDouble - (_lambda * weightVector.Get(k));
+            }
+        }
+
+        public void ComputeGradientMultiThread(WeightVector weightVector, double[] gradient,
+            int threadCount)
+        {
+            if (threadCount > 1)
+            {
+                //var newWeightVector = weightVector.DeepCopy();
+
+                var doneEvents = new ManualResetEvent[threadCount];
+                var partition = weightVector.FeatureCount / threadCount;
+
+                for (int threadIndex = 0; threadIndex < threadCount; threadIndex++)
+                {
+                    var start = threadIndex*partition;
+                    var end = start + partition;
+                    end = end > weightVector.FeatureCount ? weightVector.FeatureCount : end;
+                    doneEvents[threadIndex] = new ManualResetEvent(false);
+
+                    var info = new ThreadInfoObject(this, start, end, weightVector,
+                        doneEvents[threadIndex], gradient);
+                    ThreadPool.QueueUserWorkItem(info.StartLBFGGradientComputing, threadIndex);
+                }
+
+                WaitHandle.WaitAll(doneEvents);
+            }
+            ComputeGradientValues(weightVector, gradient, 0, weightVector.FeatureCount);
+        }
+
     }
     
 }

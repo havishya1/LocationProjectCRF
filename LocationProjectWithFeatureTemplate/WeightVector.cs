@@ -10,6 +10,7 @@ namespace LocationProjectWithFeatureTemplate
         public Dictionary<int, double> WDictionary;
         public Dictionary<string, int> FeatureKDictionary;
         public double[] WeightArray;
+        public int FeatureCount { get; set; }
 
         public WeightVector()
         {
@@ -30,7 +31,7 @@ namespace LocationProjectWithFeatureTemplate
             FeatureCount = count;
         }
 
-        public int FeatureCount { get; set; }
+        
 
         public WeightVector DeepCopy()
         {
