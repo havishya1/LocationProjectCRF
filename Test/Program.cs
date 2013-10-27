@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using LocationProjectWithFeatureTemplate;
 
 namespace Test
 {
@@ -10,7 +11,8 @@ namespace Test
     {
         static void Main(string[] args)
         {
-            SecondStep();
+            //SecondStep();
+            TestMethod1();
             Console.ReadLine();
             
         }
@@ -40,6 +42,30 @@ namespace Test
                 Console.WriteLine("processing: " + testInput);
                 var process = new ProcessRawText(testInput, testOutput);
                 process.Process();
+            }
+        }
+
+        public static void TestMethod1()
+        {
+            var str = new List<string>
+            {
+                "You",
+                "leave",
+                "the",
+                "Nagpur-Jabbalpur",
+                "highway",
+                "at",
+                "Pawni",
+                "and",
+                "proceed",
+                "to",
+                "Sillari."
+
+            };
+            var ft = new Features("OTHER", "OTHER", "LOCATION", str, 6);
+            foreach (var feat in ft.GetFeatures())
+            {
+                Console.WriteLine(feat);
             }
         }
     }

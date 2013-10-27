@@ -1,24 +1,15 @@
 able
-ad
 ade
 age
 agogy
-al
-al
 ality
 ance
 ancy
 ant
-ant
-ar
-ar
 ard
-ary
 ary
 arch
 archy
-ate
-ate
 ate
 athlon
 ation
@@ -35,8 +26,6 @@ ed
 ee
 eer
 eme
-en
-en
 ence
 ency
 ent
@@ -73,7 +62,6 @@ ier
 ile
 illion
 ious
-ing
 ing
 ion
 ish
@@ -126,4 +114,3 @@ ulent
 ward
 wise
 wright
-y

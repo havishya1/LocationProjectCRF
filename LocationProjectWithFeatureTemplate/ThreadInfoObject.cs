@@ -40,9 +40,9 @@ namespace LocationProjectWithFeatureTemplate
         public void StartLBFGGradientComputing(Object threadContext)
         {
             int threadIndex = (int)threadContext;
-            Console.WriteLine("thread {0} started...{1} to {2}", threadIndex, Start, End);
+            Console.WriteLine(DateTime.Now+": thread {0} started...{1} to {2}", threadIndex, Start, End);
             Gradient.ComputeGradientValues(NewWeightVector, GradientArray, Start, End);
-            Console.WriteLine("thread {0} done {1} to {2}", threadIndex, Start, End);
+            Console.WriteLine(DateTime.Now+": thread {0} done {1} to {2}", threadIndex, Start, End);
 
             ResetEvent.Set();
         }

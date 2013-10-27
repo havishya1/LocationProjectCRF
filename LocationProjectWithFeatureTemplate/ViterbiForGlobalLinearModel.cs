@@ -71,6 +71,24 @@ namespace LocationProjectWithFeatureTemplate
        
                 }
             }
+            // second pass over sentence.
+            // fix cases like 
+            //New LOCATION OTHER
+            //Line LOCATION LOCATION
+            //Cinema LOCATION LOCATION
+            //for (int i = 1; i < outputTags.Length; i++)
+            //{
+            //    if (outputTags[i].Equals("LOCATION") && 
+            //        outputTags[i-1].Equals("OTHER") &&
+            //        char.IsUpper(inputSentance[i-1][0]))
+            //    {
+            //        var preWord = Features.RemoveSymbols(inputSentance[i - 1]);
+            //        if (preWord.Length == inputSentance[i - 1].Length)
+            //        {
+            //            outputTags[i - 1] = "LOCATION";
+            //        }
+            //    }
+            //}
             return outputTags.ToList();
         }
 

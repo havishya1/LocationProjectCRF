@@ -310,7 +310,7 @@ namespace LocationProjectWithFeatureTemplate
             alglib.minlbfgsresults(state, out output, out rep);
             weightVector.WeightArray = output;
 
-            System.Console.WriteLine("{0}", rep.terminationtype); // EXPECTED: 4
+            System.Console.WriteLine(DateTime.Now+": terminationtype {0}", rep.terminationtype); // EXPECTED: 4
             //System.Console.WriteLine("{0}", alglib.ap.format(x, 2)); // EXPECTED: [-3,3]
             //System.Console.ReadLine();
             
@@ -321,13 +321,31 @@ namespace LocationProjectWithFeatureTemplate
         {
             var gradient = (ComputeGradient)obj;
             var weightVector = gradient._weightVector.DeepCopy();
+            
             weightVector.WeightArray = weights;
-
+            weightVector.MaxNormalize();
+            var count = 0;
+            foreach (var weight in weights)
+            {
+                if (weight > 1)
+                {
+                    Console.WriteLine(count+ ": before weight "+ weight);
+                }
+                count++;
+            }
             gradient.SetForwardBackwordAlgo(weightVector);
             func = gradient.ComputeFunctionValue(weightVector);
             //gradient.ComputeGradientValues(weightVector, grad, 0, weightVector.FeatureCount);
             gradient.ComputeGradientMultiThread(weightVector, grad, 8);
-
+            count = 0;
+            foreach (var weight in weights)
+            {
+                if (weight > 1)
+                {
+                    Console.WriteLine(count + ": after weight " + weight);
+                }
+                count++;
+            }
         }
 
         public double ComputeFunctionValue(WeightVector weightVector)
@@ -348,6 +366,7 @@ namespace LocationProjectWithFeatureTemplate
 
                 outputDouble += initOutputDouble;
             }
+            Console.WriteLine(DateTime.Now+": new function value is: "+outputDouble);
             return -outputDouble;
         }
 

@@ -41,7 +41,7 @@ namespace LocationProjectWithFeatureTemplate
             //                       where Math.Abs(pair.Value) > 1
             //                        orderby Math.Abs(pair.Value) descending 
             //                        select pair;
-            const double limit = 1;
+            const double limit = 0;
             var newWeights = new double[weightVector.FeatureCount];
             int featureCount = 0;
             Array.Clear(newWeights, 0, newWeights.Length);
@@ -53,7 +53,7 @@ namespace LocationProjectWithFeatureTemplate
                 {
                     max = Math.Abs(weightVector.WeightArray[i]);
                 }
-                if (Math.Abs(weightVector.WeightArray[i]) >= limit)
+                if (Math.Abs(weightVector.WeightArray[i]) > limit)
                 {
                     newWeights[featureCount] = weightVector.WeightArray[i];
                     var feature = DictKToFeatures[i];

@@ -23,7 +23,7 @@ namespace LocationProjectWithFeatureTemplate
 
         public void Init()
         {
-            var readModel = new ReadModel(InputModelFile);
+            var readModel = new ReadModel(InputModelFile + ".preceptron");
             var temp = new ReadModel(string.Concat(InputModelFile, ".featuresToK"));
             var dict = temp.GetFeatureToKdDictionary();
             _weightVector = new WeightVector(dict, dict.Count);

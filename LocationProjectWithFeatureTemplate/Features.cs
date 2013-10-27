@@ -7,7 +7,7 @@ using System.Runtime.InteropServices;
 
 namespace LocationProjectWithFeatureTemplate
 {
-    class Features
+    public class Features
     {
         public string T2 { get; set; }
         public string T1 { get; set; }
@@ -21,6 +21,7 @@ namespace LocationProjectWithFeatureTemplate
         private bool _currentStartsWithCap;
         private bool _nextStartsWithCap;
         private bool _prevStartsWithCap;
+        private bool _allCapNotRequired;
 
         enum FeatureEnums
         {
@@ -31,6 +32,7 @@ namespace LocationProjectWithFeatureTemplate
            Suff1Tag,
            Suff2Tag,
            Suff3Tag,
+           Suff4Tag,
            AlphaNumTag,
            AllCapsTag,
            AllSmallTag,
@@ -48,28 +50,30 @@ namespace LocationProjectWithFeatureTemplate
            IsPreviousOtherCapitalAndCurrentStartsWithCapital,
            EndsWithApostrophy,
            FirstWord,
-            IsSalutation,
+           IsSalutation,
            IsNumFollowedByCase,
            ThreeCapitalWords,
            AllCapsOnlyOne,     
-           IsBlackListed,
            CurrentLocNextStartCap,
            EndswithLy,
            EndsWithSorEd,
-           PronounWord,
-           ConjunctionWord,
-           VerbWord,
-           SandEsFollowedByTag,
-           VerbFollowedByTag,
-           EndsWithColon,
            EndsWithLL,
            PreceedsByA,
+           EndsWithColon,
+           SandEsFollowedByTag,
+           InBetweenComma,
+           PronounWord = 100,
+           ConjunctionWord,
+           VerbWord,
+           VerbFollowedByTag,
+           IsBlackListed,
            PrepositionNextTag,
            ConjunctionNextTag,
            ConjunctionPrevTag,
            SuffixNextTag,
            AdjectiveNextTag,
            VerbProceedByTag,
+           PreceedsByThe,
         }
 
         public Features(string t2, string t1, string t, List<string> sentence, int pos)
@@ -81,6 +85,7 @@ namespace LocationProjectWithFeatureTemplate
             Pos = pos;
             _currentWord = sentence[Pos].ToLowerInvariant().Trim();
             _currentStartsWithCap = char.IsUpper(Sentence[Pos][0]);
+            _allCapNotRequired = false;
             if (pos < sentence.Count - 1)
             {
                 _nextWord = sentence[Pos + 1].ToLowerInvariant().Trim();
@@ -96,11 +101,10 @@ namespace LocationProjectWithFeatureTemplate
                 //FeatureEnums.TRIGRAMTags,
                 //FeatureEnums.BiGram,
                 //FeatureEnums.CurWordPrevTag,
-                FeatureEnums.BiWordTag,
+                
                 //FeatureEnums.Suff2Tag,
                 FeatureEnums.Suff3Tag,
                 FeatureEnums.SingleCharTag,
-                FeatureEnums.AllCapsTag,
                 FeatureEnums.AllSmallTag,
                 FeatureEnums.AlphaNumTag,
                 FeatureEnums.StartWithCapTag,
@@ -131,12 +135,18 @@ namespace LocationProjectWithFeatureTemplate
                 //FeatureEnums.EndsWithApostrophy
                 FeatureEnums.EndsWithLL,
                 FeatureEnums.PreceedsByA,
+                FeatureEnums.InBetweenComma,
                 FeatureEnums.PrepositionNextTag,
                 FeatureEnums.ConjunctionNextTag,
                 FeatureEnums.ConjunctionPrevTag,
-                //FeatureEnums.SuffixNextTag,
+                FeatureEnums.SuffixNextTag,
                 FeatureEnums.AdjectiveNextTag,
                 FeatureEnums.VerbProceedByTag,
+                FeatureEnums.PreceedsByThe,
+
+                // optional tags
+                FeatureEnums.AllCapsTag,
+                FeatureEnums.BiWordTag,
             };
         }
 
@@ -149,8 +159,20 @@ namespace LocationProjectWithFeatureTemplate
                     //case FeatureEnums.TRIGRAMTags:
                     //    yield return GetTriGramFeature();
                     //    break;
+                    case FeatureEnums.InBetweenComma:
+                    {
+                        if (Pos > 0 && Pos < Sentence.Count - 1 && _currentStartsWithCap)
+                        {
+                            if (_prevWord.EndsWith(",") && _nextWord.StartsWith(","))
+                            {
+                                yield return "INBETWEENCOMMA:1:" + T;
+                            }
+                        }
+                        break;
+                    }
                     case FeatureEnums.BiWordTag:
-                        if (Pos < Sentence.Count)
+                        //&& !_allCapNotRequired
+                        if (Pos < Sentence.Count )
                         {
                             var tag = GetTagFeature();
                             if (!string.IsNullOrEmpty(tag))
@@ -196,7 +218,19 @@ namespace LocationProjectWithFeatureTemplate
 
                     case FeatureEnums.Suff3Tag:
                     {
-                        string tag = GetSuffixTag(3);
+                        //string tag = GetSuffixTag(3);
+                        var tag = GetSuffixTag(3);
+                        if (!string.IsNullOrEmpty(tag))
+                        {
+                            yield return tag;
+                        }
+                        break;
+                    }
+
+                    case FeatureEnums.Suff4Tag:
+                    {
+                        //string tag = GetSuffixTag(3);
+                        var tag = GetSuffixTag(4);
                         if (!string.IsNullOrEmpty(tag))
                         {
                             yield return tag;
@@ -215,6 +249,7 @@ namespace LocationProjectWithFeatureTemplate
                     case FeatureEnums.AllCapsTag:
                     {
                         string tag = GetAllCapsTag();
+                        // && !_allCapNotRequired
                         if (!string.IsNullOrEmpty(tag))
                         {
                             yield return tag;
@@ -315,6 +350,15 @@ namespace LocationProjectWithFeatureTemplate
                         if (!string.IsNullOrEmpty(tag))
                         {
                             yield return tag;
+                            if (tag.Contains("PREVLOCATIONCWORD"))
+                            {
+                                // cover cases Maison de Ville
+                                var word = RemoveSymbols(RemoveApos(_currentWord));
+                                if (word.Length == 2)
+                                {
+                                    yield return "PREVLOCATIONCWORDSize2:1:" + T;
+                                }
+                            }
                         }
                         break;
                     }
@@ -422,6 +466,7 @@ namespace LocationProjectWithFeatureTemplate
                     {
                         if (Config.Instance.ConjunctionSet.Contains(_currentWord))
                         {
+                            _allCapNotRequired = true;
                             yield return  "CONJUCTION:1:" + T;
                         }
                         break;
@@ -438,6 +483,7 @@ namespace LocationProjectWithFeatureTemplate
                     {
                         if (Config.Instance.PronounSet.Contains(_currentWord))
                         {
+                            _allCapNotRequired = true;
                             yield return "PRONOUN:1:" + T;
                         }
                         break;
@@ -514,6 +560,17 @@ namespace LocationProjectWithFeatureTemplate
                         }
                         break;
                     }
+                    case FeatureEnums.PreceedsByThe:
+                    {
+                        if (Pos > 0 && _currentStartsWithCap)
+                        {
+                            if (_prevWord.Equals("the"))
+                            {
+                                yield return "PRECEEDSTHE:1:" + T;
+                            }
+                        }
+                        break;
+                    }
                     case FeatureEnums.PrepositionNextTag:
                     {
                         if (Pos > 0 && _currentStartsWithCap)
@@ -521,8 +578,16 @@ namespace LocationProjectWithFeatureTemplate
                             var word = RemoveSymbols(_prevWord);
                             if (Config.Instance.PrepositionSet.Contains(word))
                             {
+                                _allCapNotRequired = true;
                                 yield return "PREPOSITIONFOLLOW:" + word + ":" + T;
                             }
+                            else if (_prevWord.Equals("the") && Pos > 1 &&
+                                     Config.Instance.PrepositionSet.Contains(Sentence[Pos - 2].ToLowerInvariant().Trim()))
+                            {
+                                _allCapNotRequired = true;
+                                yield return "PREPOSITIONFOLLOW:" + word + ":" + T;
+                            }
+
                         }
                         break;
                     }
@@ -532,7 +597,19 @@ namespace LocationProjectWithFeatureTemplate
                         {
                             if (Config.Instance.ConjunctionSet.Contains(_prevWord))
                             {
+                                _allCapNotRequired = true;
                                 yield return "CONJUNCNEXTTAG:" + _prevWord + ":" + T;
+                                if (Pos > 1 && T2.Equals("LOCATION"))
+                                {
+                                    // Cover cases like France and England
+                                    yield return "LOCCONJUNCNEXTTAG:" + _prevWord + ":" + T;
+                                }
+                            }
+                            else if (_prevWord.Equals("the") && Pos > 1 &&
+                                     Config.Instance.ConjunctionSet.Contains(Sentence[Pos - 2].ToLowerInvariant().Trim()))
+                            {
+                                _allCapNotRequired = true;
+                                yield return "CONJUNCNEXTTAG:" + Sentence[Pos-2] + ":" + T;
                             }
                         }
                         break;
@@ -544,6 +621,7 @@ namespace LocationProjectWithFeatureTemplate
                         {
                             if (Config.Instance.ConjunctionSet.Contains(_nextWord))
                             {
+                                _allCapNotRequired = true;
                                 yield return "CONJUNCPRETAG:" + _nextWord + ":" + T;
                             }
                             var word = Sentence[Pos + 2].ToLowerInvariant().Trim();
@@ -551,6 +629,7 @@ namespace LocationProjectWithFeatureTemplate
                                 char.IsUpper(Sentence[Pos+1][0]) &&
                                 Config.Instance.ConjunctionSet.Contains(word))
                             {
+                                _allCapNotRequired = true;
                                 yield return "CONJUNCPRETAG:" + word + ":" + T;
                             }
                         }
@@ -581,6 +660,7 @@ namespace LocationProjectWithFeatureTemplate
                             if (_currentStartsWithCap &&
                                 Config.Instance.AdjectiveSet.Contains(_prevWord))
                             {
+                                _allCapNotRequired = true;
                                 yield return "ADJECNEXTTAG:" + _prevWord + ":" + T;
                             }
                         }
@@ -617,8 +697,12 @@ namespace LocationProjectWithFeatureTemplate
         {
             if (Pos + 2 < Sentence.Count)
             {
-                if (IsAllUpper(Sentence[Pos]))
+                if (IsAllUpper(Sentence[Pos]) || IsSalutationAbbr(Sentence[Pos]))
                     return null;
+                if (!string.IsNullOrEmpty(GetSalutationTag()))
+                {
+                    return null;
+                }
                 if (char.IsUpper(Sentence[Pos][0]) &&
                     (char.IsUpper(Sentence[Pos + 1][0]) || Sentence[Pos+1].Length < 4))
                 {
@@ -691,7 +775,7 @@ namespace LocationProjectWithFeatureTemplate
             return input.EndsWith("'s") || input.EndsWith("'S");
         }
 
-        private string RemoveApos(string input)
+        public static string RemoveApos(string input)
         {
             if (input.EndsWith("'s") || input.EndsWith("'S"))
             {
@@ -747,16 +831,16 @@ namespace LocationProjectWithFeatureTemplate
             if (Pos > 0)
             {
                 bool prevLocation = false;
-                if (_prevWord.Length < 4)
+                if (_prevWord.Length < 5)
                 {
                     var previous = RemoveSymbols(RemoveApos(_prevWord));
-                    if (previous.Length == 0)
+                    if (previous.Length < 3)
                     {
                         prevLocation = T2.Equals("LOCATION");
                     }
                 }
 
-                if (T1.Equals("LOCATION"))
+                if (T1.Equals("LOCATION") || prevLocation)
                 {
                     if (char.IsUpper(Sentence[Pos][0]))
                     {
@@ -764,7 +848,8 @@ namespace LocationProjectWithFeatureTemplate
                     }
 
                     // University of Washington
-                    if (Sentence[Pos].Length < 4 && Pos < Sentence.Count -1 && char.IsUpper(Sentence[Pos+1][0]))
+                    if (Sentence[Pos].Length < 4 && Pos < Sentence.Count -1 && 
+                        char.IsUpper(Sentence[Pos+1][0]))
                     {
                         return "PREVLOCATIONCWORD:" + Sentence[Pos].Trim().ToLowerInvariant() + ":" + T;
                     }
@@ -776,12 +861,21 @@ namespace LocationProjectWithFeatureTemplate
 
         private string GetSalutationTag()
         {
-            if (Pos > 0)
+            var currentPos = Pos;
+            while (currentPos > 0)
             {
-                if (IsSalutationAbbr(Sentence[Pos - 1]))
+                if (char.IsUpper(Sentence[currentPos - 1][0]))
                 {
-                    return "PrevWordSaltTAG:1:" + T;
+                    if (IsSalutationAbbr(Sentence[Pos - 1]))
+                    {
+                        return "PrevWordSaltTAG:1:" + T;
+                    }
                 }
+                else
+                {
+                    return null;
+                }
+                currentPos--;
             }
             return null;
         }
@@ -817,6 +911,42 @@ namespace LocationProjectWithFeatureTemplate
         private string GetBiGram()
         {
             return "BIGRAMTAG:"+ T1 +":" + T;
+        }
+
+        private string GetPreviousWordSuffixTag(int suffix)
+        {
+            // sentence should be atleast 6 words and first word should be capital
+
+            if (Pos == 0 || ContainsApos(_prevWord) || _prevWord.Length < 6
+                || !char.IsUpper(Sentence[Pos][0])) return null;
+
+            // prev word should start with lower char
+            if (char.IsUpper(Sentence[Pos - 1][0]))
+            {
+                return null;
+            }
+
+            var input = RemoveApos(_prevWord);
+            input = RemoveSymbols(input);
+
+            input = input.ToLowerInvariant();
+            // remove s and es from end.
+            if (input.EndsWith("es"))
+            {
+                input = input.Substring(0, input.Length - 2);
+            }
+            if (input.EndsWith("s"))
+            {
+                input = input.Substring(0, input.Length - 1);
+            }
+
+            var length = input.Length;
+            if (length - suffix >= 0)
+            {
+                return "SUFF" + suffix.ToString(CultureInfo.InvariantCulture) +
+                       "TAG:" + input.Substring(length - suffix) + ":" + T;
+            }
+            return null;
         }
 
         private string GetSuffixTag(int suffix)
@@ -904,15 +1034,21 @@ namespace LocationProjectWithFeatureTemplate
             {
                 return null;
             }
-            if (_currentStartsWithCap && char.IsLetter(Sentence[Pos][0]) && !IsAllUpper(Sentence[Pos]))
+            if (_currentStartsWithCap && char.IsLetter(Sentence[Pos][0]) &&
+                !IsAllUpper(Sentence[Pos]) &&
+                !IsSalutationAbbr(Sentence[Pos]))
             {
-                if (Pos == 0 && Sentence.Count > 2 && Char.IsUpper(Sentence[Pos+1][0]))
+                if (Pos == 0 && Sentence.Count > 2 && _nextStartsWithCap)
                 {
                     return "FIRSTCHARUPPERTAGATSTART:1:" + T;
                 }
-                else
+                else if (Pos > 0 && !Config.Instance.PronounSet.Contains(_prevWord))
                 {
-                    return "FIRSTCHARUPPERTAG:1:" + T;    
+                    var tag = GetSalutationTag();
+                    if (string.IsNullOrEmpty(tag))
+                    {
+                        return "FIRSTCHARUPPERTAG:1:" + T;
+                    }
                 }
             }
             //return "FIRSTCHARUPPERTAG:0:" + T;
@@ -1000,14 +1136,15 @@ namespace LocationProjectWithFeatureTemplate
                 //    (Sentence[Pos - 1].Length < 4))
                 if (T.Equals("LOCATION") || _currentStartsWithCap)
                 {
-                    if (Config.Instance.VerbSet.Contains(_prevWord) || Config.Instance.ConjunctionSet.Contains(_prevWord))
+                    if (Config.Instance.VerbSet.Contains(_prevWord) ||
+                        Config.Instance.ConjunctionSet.Contains(_prevWord))
                     {
                         // skip is,am, are and and of neither 
-                        return "PREVOTHERWORDCURRTAG:" + Sentence[Pos-2].ToLowerInvariant().Trim() + ":" + T;
+                        return "PREVOTHERWORDCURRTAG:" + RemoveSymbols(Sentence[Pos-2].ToLowerInvariant().Trim()) + ":" + T;
                     }
                     else
                     {
-                        return "PREVOTHERWORDCURRTAG:" + _prevWord + ":" + T;    
+                        return "PREVOTHERWORDCURRTAG:" + RemoveSymbols(_prevWord) + ":" + T;    
                     }
                 }
             }
@@ -1034,7 +1171,7 @@ namespace LocationProjectWithFeatureTemplate
             return input.Any(char.IsSymbol) || input.Any(char.IsPunctuation);
         }
 
-        string RemoveSymbols(string input)
+        public static string RemoveSymbols(string input)
         {
             if (input.Length > 2)
             {
